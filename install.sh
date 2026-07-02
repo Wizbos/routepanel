@@ -29,7 +29,7 @@ SUBNET="$(ask_var RP_SUBNET 'Client tunnel subnet' '10.8.0.0/24')"
 CLIENT1="$(ask_var RP_CLIENT 'First client (device) name' 'phone')"
 if [[ -n "${RP_PASSWORD:-}" ]]; then
     PW="$RP_PASSWORD"
-elif [[ -r /dev/tty ]]; then
+elif has_tty; then
     read -r -s -p "Panel password (blank = auto-generate): " PW </dev/tty; echo
 else
     PW=""

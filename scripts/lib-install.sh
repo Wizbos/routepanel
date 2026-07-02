@@ -34,9 +34,14 @@ protect_ssh() {
     c_ok "SSH port $p kept open"
 }
 
-ask() {   # ask "prompt" "default" -> echoes answer (default if no tty)
+# True only if /dev/tty can actually be OPENED for reading. `[[ -r /dev/tty ]]`
+# is not enough: under nohup/cron the device node exists and is mode-readable
+# but opening it fails with ENXIO (no controlling terminal).
+has_tty() { { : </dev/tty; } 2>/dev/null; }
+
+ask() {   # ask "prompt" "default" -> echoes answer (default when no tty)
     local prompt="$1" def="$2" ans
-    if [[ ! -r /dev/tty ]]; then echo "$def"; return; fi
+    has_tty || { echo "$def"; return; }
     read -r -p "$prompt [$def]: " ans </dev/tty || { echo "$def"; return; }
     echo "${ans:-$def}"
 }
