@@ -1,6 +1,46 @@
 # routepanel
 
-Self-hosted AmneziaWG gateway with per-service exit routing.
-Work in progress — full README lands with the installer.
+Turn a bare VPS into your personal AmneziaWG gateway with per-service routing:
+connect your devices to one server, then route YouTube through one exit VPN,
+keep your bank direct, and send Discord through another — controlled from a
+small web panel.
 
-License: MIT.
+## How it works
+Your devices connect to the VPS over AmneziaWG (DPI-resistant WireGuard).
+On the VPS, dnsmasq resolves your DNS and tags routed domains into ipsets;
+iptables fwmarks send matching traffic out **exit nodes** — WireGuard/AmneziaWG
+tunnels to other VPNs you paste into the panel. Everything else follows the
+default policy below.
+
+## Default routing policy
+> **All client traffic goes through your first exit node. Known RU networks go
+> direct. If you have no exit nodes yet, ALL traffic goes direct from the VPS's
+> own IP.** The installer prints this at the end of setup, and the panel's
+> Exits page always shows which exit is the default.
+
+## Features
+- Interactive installer (Ubuntu 22.04/24.04, Debian 12) — coming in the next release
+- Client management in the panel: add a device, scan a QR, done
+- Exit nodes from pasted WireGuard/AmneziaWG configs, with health checks and failover chains
+- Per-service routing rules with a seeded library (YouTube, Telegram, Meta, Discord, …)
+- DNS consistency by design: resolution = marking (dnsmasq feeds the ipsets clients actually use)
+- `/health` JSON endpoint
+- Advanced: OSPF advertisement of routed prefixes into your own network (FRR)
+
+## Security model
+- Panel binds to `127.0.0.1:8080` by default — access it via `ssh -L 8080:localhost:8080 root@vps`
+- Password auth is always on (set by the installer / `routepanel-passwd`)
+- The installer never touches your default route and always allows the SSH port first
+
+## Not in v1.0
+IPv6 (AAAA is suppressed for routed domains — deliberate leak prevention) ·
+VLESS/Xray exits (planned; schema ready) · Pi-hole/AdGuard multi-site sync
+(documented recipe only) · Prometheus metrics · multi-user panel · auto-updates.
+
+## Status & support
+This is a free-time project, provided **as is**. Further development is likely
+but not promised. Suggestions and PRs are welcome — especially service-library
+packs.
+
+## License
+MIT
