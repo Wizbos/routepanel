@@ -1,0 +1,19 @@
+# systemd/routepanel-init.service
+[Unit]
+Description=routepanel boot init (ip rules, ipsets, iptables)
+# Order after the VPN interfaces exist so `ip route ... dev awgN` succeeds.
+# awg1 (doprax exit) is brought up by awg-quick@awg1 (confirmed in Phase 0 audit).
+After=network-online.target awg-quick@awg1.service
+Wants=network-online.target
+Before=routepanel.service routesyncd.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/routepanel/scripts/routepanel-init.sh
+RemainAfterExit=yes
+Environment=ROUTEPANEL_CONFIG=/etc/routepanel/config.yaml
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

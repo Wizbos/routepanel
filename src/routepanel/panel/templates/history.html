@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head"><h2>History</h2></div>
+
+<form method="get" class="toolbar">
+  <select name="action">
+    <option value="">All actions</option>
+    {% for a in ["added","removed","changed","sync","failover"] %}
+    <option value="{{ a }}" {% if action_filter==a %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn" type="submit">Filter</button>
+</form>
+
+<table>
+  <thead><tr><th>Time</th><th>Action</th><th>Rule</th><th>Exit</th><th>Detail</th><th>Actor</th></tr></thead>
+  <tbody>
+  {% for e in entries %}
+  <tr>
+    <td class="sync">{{ e.ts }}</td>
+    <td><span class="badge {% if e.action=='added' %}badge-vpn{% elif e.action=='removed' %}badge-direct{% endif %}">{{ e.action }}</span></td>
+    <td>{{ e.rule_name or '-' }}</td>
+    <td>{{ e.exit_id or '-' }}</td>
+    <td style="color:var(--muted)">{{ e.detail or '' }}</td>
+    <td style="color:var(--muted)">{{ e.actor_ip }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

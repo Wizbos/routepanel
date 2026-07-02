@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h2>Exits</h2>
+  <button class="btn btn-primary" onclick="document.getElementById('overlay').classList.add('open')">+ Add exit</button>
+</div>
+
+<table>
+  <thead><tr>
+    <th>Priority</th><th>Name</th><th>Interface</th><th>fwmark</th>
+    <th>Table</th><th>Health</th><th>Fallback</th><th></th>
+  </tr></thead>
+  <tbody>
+  {% for e in exits %}
+  <tr>
+    <td>{{ e.priority }}</td>
+    <td><span class="svc-name">{{ e.id }}</span></td>
+    <td><code>{{ e.interface }}</code></td>
+    <td><code>{{ e.fwmark }}</code></td>
+    <td><code>{{ e.routing_table }}</code></td>
+    <td class="status-{{ e.health_status }}">&#9679; {{ e.health_status }} {{ e.latency_ms }}</td>
+    <td>{{ e.fallback_exit_id or '-' }}</td>
+    <td class="row-actions"><button class="icon-btn danger" title="Delete" onclick="delExit('{{ e.id }}')">&#10005;</button></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-head"><h3>Add exit</h3><button class="icon-btn" onclick="document.getElementById('overlay').classList.remove('open')">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="fg"><label>ID (name)</label><input id="e-id"></div>
+      <div class="fg"><label>Interface</label><input id="e-iface" placeholder="awg2"></div>
+      <div class="fg"><label>fwmark (0=direct)</label><input id="e-fwmark" type="number" value="101"></div>
+      <div class="fg"><label>Routing table</label><input id="e-table" placeholder="vpn2"></div>
+      <div class="fg"><label>Health check IP</label><input id="e-hcip" value="1.1.1.1"></div>
+      <div class="fg"><label>Fallback exit ID</label><input id="e-fallback" placeholder="direct"></div>
+      <div class="fg"><label>Priority</label><input id="e-priority" type="number" value="2"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="document.getElementById('overlay').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="addExit()">Add exit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function addExit() {
+  await apiPost("/exits", {
+    id: document.getElementById("e-id").value,
+    interface: document.getElementById("e-iface").value,
+    fwmark: parseInt(document.getElementById("e-fwmark").value),
+    routing_table: document.getElementById("e-table").value,
+    health_check_ip: document.getElementById("e-hcip").value,
+    fallback_exit_id: document.getElementById("e-fallback").value || null,
+    priority: parseInt(document.getElementById("e-priority").value),
+  });
+  location.reload();
+}
+async function delExit(id) {
+  if (!confirm("Delete exit " + id + "?")) return;
+  await apiDelete("/exits/" + id);
+  location.reload();
+}
+</script>
+{% endblock %}

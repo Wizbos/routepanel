@@ -1,0 +1,18 @@
+# systemd/routepanel.service
+[Unit]
+Description=routepanel web panel
+After=network.target routepanel-init.service
+Requires=routepanel-init.service
+
+[Service]
+Type=simple
+ExecStart=/opt/routepanel/.venv/bin/routepanel
+Restart=on-failure
+RestartSec=5
+Environment=ROUTEPANEL_CONFIG=/etc/routepanel/config.yaml
+WorkingDirectory=/opt/routepanel
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

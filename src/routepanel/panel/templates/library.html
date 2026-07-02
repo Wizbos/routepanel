@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-head">
+  <h2>Service Library</h2>
+  <button class="btn btn-primary" onclick="openNew()">+ New pack</button>
+</div>
+
+<div class="lib-chips" style="margin-bottom:20px">
+{% for p in packs %}
+  <button class="btn" title="{{ p.cidrs_list|length }} CIDRs"
+    onclick='openEdit({{ p.id | tojson }}, {{ p.name | tojson }}, {{ p.domains_list | tojson }}, {{ p.cidrs_list | tojson }})'>{{ p.name }}</button>
+{% endfor %}
+</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head"><h3 id="lib-title">New pack</h3><button class="icon-btn" onclick="closeModal()">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="fg" id="lib-id-group"><label>ID (slug)</label><input id="lp-id"></div>
+      <div class="fg"><label>Name</label><input id="lp-name"></div>
+      <div class="fg"><label>Domains (one per line)</label><textarea id="lp-domains" rows="5"></textarea></div>
+      <div class="fg"><label>Static CIDRs (one per line)</label><textarea id="lp-cidrs" rows="3"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger" id="lib-del" style="display:none;margin-right:auto" onclick="deletePack()">Delete</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="savePack()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let editingPack = null;
+const splitLines = (id) => document.getElementById(id).value.split("\n").map(s=>s.trim()).filter(Boolean);
+
+function closeModal(){ document.getElementById("overlay").classList.remove("open"); }
+
+function openNew(){
+  editingPack = null;
+  document.getElementById("lib-title").textContent = "New pack";
+  document.getElementById("lib-id-group").style.display = "block";
+  document.getElementById("lib-del").style.display = "none";
+  document.getElementById("lp-id").value = "";
+  document.getElementById("lp-name").value = "";
+  document.getElementById("lp-domains").value = "";
+  document.getElementById("lp-cidrs").value = "";
+  document.getElementById("overlay").classList.add("open");
+}
+
+function openEdit(id, name, domains, cidrs){
+  editingPack = id;
+  document.getElementById("lib-title").textContent = "Edit pack";
+  document.getElementById("lib-id-group").style.display = "none";
+  document.getElementById("lib-del").style.display = "inline-flex";
+  document.getElementById("lp-name").value = name;
+  document.getElementById("lp-domains").value = (domains || []).join("\n");
+  document.getElementById("lp-cidrs").value = (cidrs || []).join("\n");
+  document.getElementById("overlay").classList.add("open");
+}
+
+async function savePack(){
+  const payload = {
+    name: document.getElementById("lp-name").value,
+    domains: splitLines("lp-domains"),
+    cidrs: splitLines("lp-cidrs"),
+  };
+  if (editingPack){
+    await apiPut("/library/" + editingPack, payload);
+  } else {
+    payload.id = document.getElementById("lp-id").value;
+    await apiPost("/library", payload);
+  }
+  location.reload();
+}
+
+async function deletePack(){
+  if (!editingPack) return;
+  if (!confirm("Delete pack " + editingPack + "?")) return;
+  await apiDelete("/library/" + editingPack);
+  location.reload();
+}
+</script>
+{% endblock %}

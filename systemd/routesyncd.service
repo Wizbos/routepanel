@@ -1,0 +1,20 @@
+# systemd/routesyncd.service
+[Unit]
+Description=routesyncd polling daemon
+After=network.target routepanel-init.service dnsmasq.service
+Wants=dnsmasq.service
+Requires=routepanel-init.service
+
+[Service]
+Type=simple
+ExecStart=/opt/routepanel/.venv/bin/routesyncd
+Restart=on-failure
+RestartSec=10
+Environment=ROUTEPANEL_CONFIG=/etc/routepanel/config.yaml
+WorkingDirectory=/opt/routepanel
+PIDFile=/run/routesyncd.pid
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

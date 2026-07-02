@@ -1,0 +1,23 @@
+<!-- src/routepanel/panel/templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>routepanel</title>
+  <link rel="stylesheet" href="/static/app.css?v={{ static_ver }}">
+</head>
+<body>
+<nav class="nav">
+  <span class="nav-brand">routepanel</span>
+  <a href="/" class="nav-tab {% if active=='domains' %}active{% endif %}">Domain Rules</a>
+  <a href="/exits" class="nav-tab {% if active=='exits' %}active{% endif %}">Exits</a>
+  <a href="/library" class="nav-tab {% if active=='library' %}active{% endif %}">Service Library</a>
+  <a href="/history" class="nav-tab {% if active=='history' %}active{% endif %}">History</a>
+</nav>
+<main class="main">
+  {% block content %}{% endblock %}
+</main>
+<script src="/static/app.js?v={{ static_ver }}"></script>
+<script src="/static/table.js?v={{ static_ver }}"></script>
+</body>
+</html>

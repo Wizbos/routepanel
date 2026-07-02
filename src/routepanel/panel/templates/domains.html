@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block content %}
+<input type="hidden" id="rule-total" value="{{ rules|length }}">
+
+<div class="page-head">
+  <div>
+    <h2>Domain Rules</h2>
+    <div class="count" id="count">{{ rules|length }} of {{ rules|length }} shown</div>
+  </div>
+  <button class="btn btn-primary" onclick="openAdd()">+ Add rule</button>
+</div>
+
+<div class="toolbar">
+  <div class="search">
+    <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+    <input id="q" type="text" placeholder="Search name or domain…">
+  </div>
+  <select id="exitFilter">
+    <option value="">All exits</option>
+    {% for e in exits %}<option value="{{ e.id }}">{{ e.id }}</option>{% endfor %}
+  </select>
+  <span class="seg-label">OSPF</span>
+  <div class="seg" id="ospfSeg">
+    <button data-v="any" class="on" onclick="setOspf('any')">Any</button>
+    <button data-v="on" onclick="setOspf('on')">On</button>
+    <button data-v="off" onclick="setOspf('off')">Off</button>
+  </div>
+</div>
+
+<table>
+  <thead><tr>
+    <th class="sortable" data-k="name" onclick="sortBy('name')">Service <span class="arrow">&#8597;</span></th>
+    <th>Exit</th>
+    <th class="ctr">OSPF</th>
+    <th class="num sortable" data-k="ips" onclick="sortBy('ips')">IPs <span class="arrow">&#8597;</span></th>
+    <th class="sortable" data-k="sync" onclick="sortBy('sync')">Last sync <span class="arrow">&#8597;</span></th>
+    <th></th>
+  </tr></thead>
+  <tbody id="rows">
+  {% for r in rules %}
+    <tr
+      data-name="{{ r.name|lower }}"
+      data-search="{{ (r.name ~ ' ' ~ r.domains_list|join(' '))|lower }}"
+      data-exit="{{ r.exit_id }}"
+      data-ospf="{{ '1' if r.ospf_distribute else '0' }}"
+      data-ips="{{ r.ip_count }}"
+      data-sync="{{ r.last_sync or '' }}"
+      data-rule='{{ {"id": r.id, "name": r.name, "domains": r.domains_list, "exit_id": r.exit_id, "ospf_distribute": (r.ospf_distribute and true or false), "static_cidrs": r.cidrs_list, "notes": r.notes or ""} | tojson }}'>
+      <td>
+        <div class="svc-name">{{ r.name }}</div>
+        <div class="svc-domains">{{ r.domains_list[0] }}{% if r.domains_list|length > 1 %} +{{ r.domains_list|length - 1 }}{% endif %}</div>
+      </td>
+      <td><span class="badge {% if r.exit_id=='direct' %}badge-direct{% else %}badge-vpn{% endif %}"><span class="dot dot-{{ r.exit_health }}"></span>{{ r.exit_id }}</span></td>
+      <td class="ctr">{% if r.ospf_distribute %}<span class="ospf-yes">&#10003;</span>{% else %}<span class="ospf-no">&mdash;</span>{% endif %}</td>
+      <td class="num">{{ r.ip_count }}</td>
+      <td><span class="sync">{{ r.last_sync or 'pending' }}</span></td>
+      <td class="row-actions">
+        <button class="icon-btn" title="Edit" onclick="editRule(this)">&#9998;</button>
+        <button class="icon-btn danger" title="Delete" onclick="delRule({{ r.id }})">&#10005;</button>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div class="empty" id="empty" style="display:none">No rules match these filters.</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head"><h3 id="modalTitle">Add rule</h3><button class="icon-btn" onclick="closeModal()">&#10005;</button></div>
+    <div class="modal-body">
+      <div class="fg">
+        <label>Pick from library</label>
+        <div class="lib-chips">
+          {% for pack in library %}
+          <button type="button" class="btn" onclick='pickLibrary({{ pack.domains_list | tojson }}, {{ pack.cidrs_list | tojson }})'>{{ pack.name }}</button>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="fg"><label>Service name</label><input id="d-name" placeholder="YouTube"></div>
+      <div class="fg"><label>Domains (one per line)</label><textarea id="domains-input" rows="4" placeholder="youtube.com"></textarea></div>
+      <div class="fg"><label>Exit</label><select id="d-exit">{% for e in exits %}<option value="{{ e.id }}">{{ e.id }}</option>{% endfor %}</select></div>
+      <div class="fg check-row"><input type="checkbox" id="d-ospf"><label for="d-ospf">Distribute via OSPF (corp clients reach via VPS)</label></div>
+      <div class="fg"><label>Static CIDRs (one per line)</label><textarea id="cidrs-input" rows="3" placeholder="142.250.0.0/15"></textarea><div class="hint">For CDNs, OSPF routes corp traffic reliably only via stable CIDRs; live /32s are best-effort.</div></div>
+      <div class="fg"><label>Notes</label><input id="d-notes"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="submitRule()">Save rule</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let editingId = null;
+const split = (id) => document.getElementById(id).value.split("\n").map(s => s.trim()).filter(Boolean);
+
+function openAdd() {
+  editingId = null;
+  document.getElementById("modalTitle").textContent = "Add rule";
+  document.getElementById("d-name").value = "";
+  document.getElementById("domains-input").value = "";
+  document.getElementById("cidrs-input").value = "";
+  document.getElementById("d-notes").value = "";
+  document.getElementById("d-ospf").checked = false;
+  document.getElementById("d-exit").selectedIndex = 0;
+  document.getElementById("overlay").classList.add("open");
+}
+
+function editRule(btn) {
+  const r = JSON.parse(btn.closest("tr").dataset.rule);
+  editingId = r.id;
+  document.getElementById("modalTitle").textContent = "Edit rule";
+  document.getElementById("d-name").value = r.name;
+  document.getElementById("domains-input").value = (r.domains || []).join("\n");
+  document.getElementById("d-exit").value = r.exit_id;
+  document.getElementById("d-ospf").checked = !!r.ospf_distribute;
+  document.getElementById("d-notes").value = r.notes || "";
+  document.getElementById("cidrs-input").value = (r.static_cidrs || []).join("\n");
+  document.getElementById("overlay").classList.add("open");
+}
+
+function closeModal() { document.getElementById("overlay").classList.remove("open"); }
+
+async function submitRule() {
+  const body = {
+    name: document.getElementById("d-name").value,
+    domains: split("domains-input"),
+    exit_id: document.getElementById("d-exit").value,
+    ospf_distribute: document.getElementById("d-ospf").checked,
+    static_cidrs: split("cidrs-input"),
+    notes: document.getElementById("d-notes").value || null,
+  };
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true;
+  try {
+    if (editingId) { await apiPut("/domains/" + editingId, body); }
+    else { await apiPost("/domains", body); }
+    location.reload();
+  } catch (e) {
+    btn.disabled = false;
+    alert("Save failed: " + (e && e.message ? e.message : e));
+  }
+}
+
+async function delRule(id) {
+  if (!confirm("Delete rule?")) return;
+  await apiDelete("/domains/" + id);
+  location.reload();
+}
+</script>
+{% endblock %}

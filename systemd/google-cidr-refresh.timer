@@ -1,0 +1,8 @@
+# systemd/google-cidr-refresh.timer
+[Unit]
+Description=Weekly Google/YouTube CIDR refresh for routepanel
+[Timer]
+OnCalendar=weekly
+Persistent=true
+[Install]
+WantedBy=timers.target

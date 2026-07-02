@@ -1,0 +1,35 @@
+# /opt/routepanel/config.yaml.example
+bind_host: "10.255.99.30"
+port: 8080
+db_path: "/etc/routepanel/db.sqlite"
+ipsets_save_path: "/etc/routepanel/ipsets.save"
+poll_interval: 300
+health_interval: 30
+health_latency_threshold_ms: 200.0
+health_down_threshold: 3
+health_up_threshold: 3
+failback_min_dwell_sec: 300
+default_exit_id: "doprax"
+client_interfaces:
+  - awg0
+  - docker0
+  - amn0
+  - wg-vermont
+frr_next_hop: "147.45.185.1"   # NOT Null0: Null0 blackholes any direct-exit (or failover-to-direct) traffic in the main table
+wan_interface: "eth0"
+
+# DNS interception (hybrid model — §3.5). false = periodic resolution only.
+dns_intercept: true
+dnsmasq_conf_path: "/etc/routepanel/dnsmasq-routepanel.conf"
+dnsmasq_service: "dnsmasq"          # systemctl reload <service> after regen
+
+# OSPF rate-limiting (§8.1)
+ospf_debounce_sec: 60
+max_ospf_ips_per_rule: 64
+
+# Housekeeping
+resolved_ip_ttl_days: 7
+ipset_timeout_sec: 86400   # ipset members auto-expire after this (dnsmasq + daemon both add without explicit timeout)
+
+# Optional defence-in-depth. Empty = no auth (corp-network restriction only).
+auth_token: ""
