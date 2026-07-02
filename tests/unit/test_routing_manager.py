@@ -75,3 +75,26 @@ def test_rebuild_chain_skips_missing_system_ipset():
     # the present system set still got its rule
     assert any("present_set" in a for a in appended)
     assert not any("missing_set" in a for a in appended)
+
+def test_ensure_client_nat_masquerades_each_exit_and_wan():
+    exits = [
+        {"id": "vpn1", "interface": "rpx101", "fwmark": 101},
+        {"id": "direct", "interface": "eth0", "fwmark": 0},
+    ]
+    added = []
+    with patch("subprocess.run") as run:
+        # -C (check) returns nonzero -> rule absent -> -A is issued
+        run.side_effect = lambda args, **kw: added.append(args) or MagicMock(
+            returncode=(0 if args[:1] == ["ipset"] else (1 if "-C" in args else 0)))
+        rm.ensure_client_nat("10.8.0.0/24", exits, "eth0")
+    appends = [a for a in added if a[:4] == ["iptables", "-t", "nat", "-A"]]
+    outs = {a[a.index("-o") + 1] for a in appends}
+    assert outs == {"rpx101", "eth0"}                 # exit iface + WAN, not the direct exit's eth0 twice
+    for a in appends:
+        assert a[a.index("-s") + 1] == "10.8.0.0/24"
+        assert a[-1] == "MASQUERADE"
+
+def test_ensure_client_nat_noop_without_subnet():
+    with patch("subprocess.run") as run:
+        rm.ensure_client_nat(None, [], "eth0")
+    run.assert_not_called()

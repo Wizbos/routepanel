@@ -140,11 +140,29 @@ def remove_wan_nat(rule_id, wan_interface: str) -> None:
     _nat(["-D", "POSTROUTING", "-o", wan_interface, "-m", "set",
           "--match-set", f"rule_{rule_id}", "dst", "-j", "MASQUERADE"])
 
+def ensure_client_nat(client_subnet: str | None, exits: list[dict], wan_interface: str) -> None:
+    """MASQUERADE the whole client subnet out every exit interface (rpx*) and the
+    WAN. Client packets keep their private 10.x source until they leave the box;
+    the upstream provider tunnel (and the WAN) will not route that source back, so
+    SNAT-to-egress is mandatory for ANY traffic to flow. Idempotent."""
+    if not client_subnet:
+        return
+    ifaces = {wan_interface}                       # direct default egresses the WAN
+    for e in exits:
+        if e.get("fwmark", 0) != 0 and e.get("interface"):
+            ifaces.add(e["interface"])             # each VPN exit's tunnel
+    for iface in sorted(ifaces):
+        if _nat(["-C", "POSTROUTING", "-s", client_subnet, "-o", iface,
+                 "-j", "MASQUERADE"]).returncode != 0:
+            _nat(["-A", "POSTROUTING", "-s", client_subnet, "-o", iface,
+                  "-j", "MASQUERADE"], check=True)
+
 def reconcile(exits: list[dict], rules: list[dict], effective_fwmark: dict,
-              default_fwmark: int) -> None:
-    """Full idempotent apply. Safe to call at boot AND on every sync, so exits/rules
-    added through the panel take effect without a reboot, and failover = one rebuild."""
+              default_fwmark: int, client_subnet: str | None = None) -> None:
+    """Full idempotent apply. client_subnet (the AWG server's tunnel subnet) enables
+    the client-traffic MASQUERADE without which nothing routes."""
     apply_routing_tables(exits)
     apply_ip_rules(exits)
     rebuild_chain(rules, effective_fwmark, default_fwmark)
     ensure_wan_nat(rules, get_config().wan_interface)
+    ensure_client_nat(client_subnet, exits, get_config().wan_interface)

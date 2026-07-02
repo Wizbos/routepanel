@@ -61,7 +61,14 @@ async def _resolve_default():
 
 default_exit_id = asyncio.run(_resolve_default())
 default_fwmark = fwmark_of.get(default_exit_id, 0)
-routing_manager.reconcile(exits, rules, effective_fwmark, default_fwmark)
+
+srv = db2 = None
+import sqlite3 as _sq
+_c = _sq.connect("/etc/routepanel/db.sqlite"); _c.row_factory = _sq.Row
+_row = _c.execute("SELECT value FROM settings WHERE key='awg.subnet'").fetchone()
+_c.close()
+client_subnet = _row["value"] if _row else None
+routing_manager.reconcile(exits, rules, effective_fwmark, default_fwmark, client_subnet)
 print(f"[routepanel-init] reconciled: {len(exits)} exits, {len(rules)} rules")
 PYEOF
 
