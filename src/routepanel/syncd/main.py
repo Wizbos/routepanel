@@ -183,6 +183,12 @@ async def _run_sync_inner() -> None:
             _server = await get_server(db)
             client_subnet = _server["subnet"] if _server else None
             routing_manager.reconcile(exits, rules, effective_fwmark, default_fwmark, client_subnet)
+            if cfg.dns_intercept and client_subnet:
+                try:
+                    routing_manager.ensure_dns_intercept(
+                        client_subnet, cfg.resolver_port, cfg.client_interfaces)
+                except Exception as e:
+                    log.error("dns intercept setup failed: %s", e)
         except Exception as e:
             log.error("routing reconcile failed: %s", e)
 

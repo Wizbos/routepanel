@@ -166,6 +166,22 @@ def ensure_client_nat(client_subnet: str | None, exits: list[dict], wan_interfac
             _nat(["-A", "POSTROUTING", "-s", client_subnet, "-o", iface,
                   "-j", "MASQUERADE"], check=True)
 
+def ensure_dns_intercept(client_subnet: str | None, dnsmasq_port: int,
+                          client_interfaces: list[str]) -> None:
+    """Redirect any client :53 query (TCP+UDP) arriving on a client interface to
+    the local ipset-tagging dnsmasq. This is the resolution=marking guarantee: a
+    client that hardcoded 8.8.8.8 still gets answers from the resolver that fills
+    the ipsets, so routed domains can't leak past the tunnel. Idempotent."""
+    if not client_subnet:
+        return
+    for iface in client_interfaces:
+        for proto in ("udp", "tcp"):
+            rule = ["PREROUTING", "-i", iface, "-s", client_subnet,
+                    "-p", proto, "--dport", "53",
+                    "-j", "DNAT", "--to-destination", f"127.0.0.1:{dnsmasq_port}"]
+            if _nat(["-C", *rule]).returncode != 0:
+                _nat(["-A", *rule], check=True)
+
 def reconcile(exits: list[dict], rules: list[dict], effective_fwmark: dict,
               default_fwmark: int, client_subnet: str | None = None) -> None:
     """Full idempotent apply. client_subnet (the AWG server's tunnel subnet) enables

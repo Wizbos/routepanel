@@ -107,6 +107,18 @@ def test_system_ipsets_includes_ru_direct_when_enabled():
     from routepanel.config import Config
     assert rm.system_ipsets(Config(ru_direct=True)) == [("ru_direct", "clear")]
 
+def test_ensure_dns_intercept_dnats_client_53():
+    added = []
+    with patch("subprocess.run") as run:
+        run.side_effect = lambda args, **kw: added.append(args) or MagicMock(
+            returncode=(1 if "-C" in args else 0))
+        rm.ensure_dns_intercept("10.8.0.0/24", 5353, ["awg0"])
+    appends = [a for a in added if "-A" in a and "PREROUTING" in a]
+    assert appends, "expected a DNAT PREROUTING rule"
+    a = appends[0]
+    assert "10.8.0.0/24" in a and "53" in a and "awg0" in a
+    assert a[-1].endswith(":5353") or "5353" in a
+
 def test_rebuild_chain_marks_ru_direct_when_enabled():
     from routepanel.config import Config
     appended = []
