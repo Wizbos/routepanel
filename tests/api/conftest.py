@@ -13,7 +13,7 @@ async def test_client(tmp_path, monkeypatch):
     reset_config()
     # override db path in open_db via monkeypatching get_config
     from routepanel import config as cfg_mod
-    cfg_mod._config = cfg_mod.Config(db_path=db_path)
+    cfg_mod._config = cfg_mod.Config(db_path=db_path, password_file="/nonexistent")
 
     db = await open_db(db_path)
     # seed exits

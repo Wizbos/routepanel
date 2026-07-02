@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:360px;margin:80px auto">
+  <h2>routepanel</h2>
+  <form method="post" action="/login">
+    <input type="password" name="password" placeholder="Panel password" autofocus
+           style="width:100%;margin-bottom:12px">
+    <button type="submit" class="btn">Sign in</button>
+  </form>
+</div>
+{% endblock %}

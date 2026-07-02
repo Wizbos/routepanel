@@ -22,6 +22,7 @@ dependencies = [
 [project.scripts]
 routepanel = "routepanel.panel.app:main"
 routesyncd = "routepanel.syncd.main:main"
+routepanel-passwd = "routepanel.passwd_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
