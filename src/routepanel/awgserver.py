@@ -3,7 +3,7 @@
 config rendering. Server identity lives in the settings table (awg.* keys);
 peers live in the clients table. apply_server_conf() re-renders the interface
 config and live-syncs it (awg syncconf) so peer changes don't drop the tunnel."""
-import ipaddress, json, logging, os, shutil, subprocess
+import ipaddress, json, logging, os, shlex, shutil, subprocess
 import aiosqlite
 from routepanel.settings import get_setting
 
@@ -26,12 +26,12 @@ def gen_psk() -> str:
 
 def allocate_client_ip(taken: set[str], subnet: str) -> str:
     net = ipaddress.ip_network(subnet)
+    server_ip = _server_ip(subnet)
     for host in net.hosts():
         ip = str(host)
-        if ip.endswith(".1") and ip == str(next(net.hosts())):
-            continue                       # .1 = server address
-        if ip not in taken:
-            return ip
+        if ip == server_ip or ip in taken:
+            continue
+        return ip
     raise RuntimeError(f"subnet {subnet} exhausted")
 
 def _server_ip(subnet: str) -> str:
@@ -99,7 +99,9 @@ async def apply_server_conf(db: aiosqlite.Connection, cfg) -> None:
     wg = shutil.which("awg") or shutil.which("wg")
     if quick and wg:
         r = subprocess.run(
-            ["bash", "-c", f"{wg} syncconf {cfg.awg_interface} <({quick} strip {path})"],
+            ["bash", "-c",
+             f"{shlex.quote(wg)} syncconf {shlex.quote(cfg.awg_interface)} "
+             f"<({shlex.quote(quick)} strip {shlex.quote(path)})"],
             capture_output=True, text=True)
         if r.returncode != 0:
             log.error("awg syncconf failed (config written; will apply on iface restart): %s",

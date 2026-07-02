@@ -18,6 +18,11 @@ def test_allocate_client_ip():
     assert awgserver.allocate_client_ip(set(), "10.8.0.0/24") == "10.8.0.2"
     assert awgserver.allocate_client_ip({"10.8.0.2"}, "10.8.0.0/24") == "10.8.0.3"
 
+def test_allocate_skips_server_ip_in_odd_subnet():
+    # /25 not on a .0 boundary: server (first host) is 10.8.0.129, so the
+    # first client IP must be 10.8.0.130 -- no literal ".1" involved.
+    assert awgserver.allocate_client_ip(set(), "10.8.0.128/25") == "10.8.0.130"
+
 def test_allocate_exhausted():
     taken = {f"10.8.0.{i}" for i in range(2, 255)}
     with pytest.raises(RuntimeError):
