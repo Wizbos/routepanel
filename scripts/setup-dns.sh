@@ -45,6 +45,18 @@ cache_file = '/var/cache/dnscrypt-proxy/public-resolvers.md'
 minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
 TOML
 
-systemctl enable --now dnscrypt-proxy >/dev/null 2>&1 || systemctl restart dnscrypt-proxy || true
+# Ubuntu ships a dnscrypt-proxy.socket unit that pre-binds 127.0.2.1:53 and, via
+# socket activation, overrides our listen_addresses (dnscrypt logs "Wiring systemd
+# socket … 127.0.2.1:53" and ignores the toml). Disable the socket so the service
+# starts standalone and honours listen_addresses = 127.0.0.1:5054.
+systemctl disable --now dnscrypt-proxy.socket >/dev/null 2>&1 || true
+systemctl enable dnscrypt-proxy >/dev/null 2>&1 || true
+systemctl restart dnscrypt-proxy || true
 systemctl restart dnsmasq
+
+# Wait for dnscrypt to bind :5054 (it fetches its resolver list on first start).
+for _ in $(seq 1 15); do
+    ss -tulnp 2>/dev/null | grep -q '127.0.0.1:5054' && break
+    sleep 1
+done
 echo "[setup-dns] dnsmasq(:5353) + dnscrypt-proxy(:5054) configured"
