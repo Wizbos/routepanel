@@ -7,8 +7,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/scripts/lib-install.sh"
 
 require_root
-if [[ -f "$CONFIG" ]]; then
-    exec bash "$HERE/scripts/menu.sh"     # already installed -> menu mode (Task 6)
+if [[ -f "$CONFDIR/.installed" ]]; then
+    exec bash "$HERE/scripts/menu.sh"     # completed install -> menu mode
 fi
 
 echo "=== routepanel installer ==="
@@ -130,3 +130,5 @@ echo "Open the panel over an SSH tunnel:"
 echo "  ssh -L 8080:localhost:8080 root@$PUBIP   then browse http://localhost:8080"
 echo "  panel password: $PW"
 echo "Re-run 'sudo bash install.sh' any time for the management menu."
+
+touch "$CONFDIR/.installed"

@@ -38,7 +38,13 @@ def apply_ipset(cidrs, ipset: str = IPSET, runner=subprocess.run) -> None:
     runner(["ipset", "swap", tmp, ipset], check=True)
     runner(["ipset", "destroy", tmp], check=True)
 
-def main(url: str = DEFAULT_URL) -> None:
+def main(url: str | None = None) -> None:
+    if url is None:
+        try:
+            from routepanel.config import get_config
+            url = get_config().ru_direct_url or DEFAULT_URL
+        except Exception:
+            url = DEFAULT_URL
     try:
         cidrs = parse_zone(_default_fetch(url))
     except Exception as e:
