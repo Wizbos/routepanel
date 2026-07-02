@@ -14,6 +14,17 @@ def test_gen_keypair_uses_awg_binary():
     assert (priv, pub) == ("PRIV=", "PUB=")
     assert run.call_args_list[0].args[0] == ["/usr/bin/awg", "genkey"]
 
+def test_gen_awg_params_shape():
+    p = awgserver.gen_awg_params()
+    # required AmneziaWG obfuscation keys, all present as strings
+    for k in ("Jc","Jmin","Jmax","S1","S2","H1","H2","H3","H4"):
+        assert k in p and isinstance(p[k], str) and p[k].isdigit()
+    jc, jmin, jmax = int(p["Jc"]), int(p["Jmin"]), int(p["Jmax"])
+    assert 1 <= jc <= 10
+    assert jmin < jmax
+    # H1..H4 must be distinct (AWG requires it)
+    assert len({p["H1"],p["H2"],p["H3"],p["H4"]}) == 4
+
 def test_allocate_client_ip():
     assert awgserver.allocate_client_ip(set(), "10.8.0.0/24") == "10.8.0.2"
     assert awgserver.allocate_client_ip({"10.8.0.2"}, "10.8.0.0/24") == "10.8.0.3"

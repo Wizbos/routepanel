@@ -124,7 +124,7 @@ else
   echo "POLICY: all client traffic → your first exit node. (RU-direct disabled.)"
 fi
 echo "You have no exit nodes yet, so ALL traffic currently goes DIRECT from this VPS's IP."
-echo "Add an exit node in the panel to start tunneling."
+echo "Add an exit node (paste a WireGuard/AmneziaWG config via the exit API) to start tunneling."
 echo
 echo "Open the panel over an SSH tunnel:"
 echo "  ssh -L 8080:localhost:8080 root@$PUBIP   then browse http://localhost:8080"

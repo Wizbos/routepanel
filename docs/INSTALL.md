@@ -160,8 +160,9 @@ that don't tunnel well or don't need to.
 ## Adding exit nodes
 
 Exit nodes are WireGuard/AmneziaWG tunnels to other VPNs that routed traffic
-egresses through. Import one by pasting its config in the panel's exit-node
-screen, or via the exit API — configs land in `/etc/routepanel/exits/`. The
+egresses through. In v1, import one by pasting its config via the exit API —
+configs land in `/etc/routepanel/exits/`. (A paste-in-panel exit-node screen
+is planned but not built yet; see the deferred-work list below.) The
 installer does not create any exit nodes for you: with none configured, all
 client traffic goes direct from the VPS's own IP (see the README's *Default
 routing policy*), and health checks / failover chains only apply once you've

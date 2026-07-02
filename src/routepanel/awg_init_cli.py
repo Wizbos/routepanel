@@ -15,9 +15,12 @@ async def _run(a) -> None:
             print("AWG server already initialized; refusing to overwrite keys")
             return
         priv, pub = awgserver.gen_keypair()
+        params = json.loads(a.awg_params)
+        if not params:
+            params = awgserver.gen_awg_params()
         for k, v in [("awg.private_key", priv), ("awg.public_key", pub),
                      ("awg.subnet", a.subnet), ("awg.port", str(a.port)),
-                     ("awg.endpoint", a.endpoint), ("awg.params", a.awg_params)]:
+                     ("awg.endpoint", a.endpoint), ("awg.params", json.dumps(params))]:
             await set_setting(db, k, v)
         await db.commit()
         await awgserver.apply_server_conf(db, get_config())

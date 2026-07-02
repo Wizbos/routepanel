@@ -3,11 +3,29 @@
 config rendering. Server identity lives in the settings table (awg.* keys);
 peers live in the clients table. apply_server_conf() re-renders the interface
 config and live-syncs it (awg syncconf) so peer changes don't drop the tunnel."""
-import ipaddress, json, logging, os, shlex, shutil, subprocess
+import ipaddress, json, logging, os, random, shlex, shutil, subprocess
 import aiosqlite
 from routepanel.settings import get_setting
 
 log = logging.getLogger("routepanel")
+
+def gen_awg_params() -> dict:
+    """Random AmneziaWG obfuscation parameters. These make the handshake look
+    unlike vanilla WireGuard (Jc junk packets, S1/S2 header sizes, H1-H4 distinct
+    magic headers) — the DPI-resistance the product depends on. Stored in settings
+    awg.params and emitted verbatim into both the server and every client conf."""
+    jmin = random.randint(50, 100)
+    jmax = random.randint(jmin + 200, jmin + 900)
+    headers = random.sample(range(5, 2_147_483_647), 4)
+    return {
+        "Jc": str(random.randint(3, 10)),
+        "Jmin": str(jmin),
+        "Jmax": str(jmax),
+        "S1": str(random.randint(15, 150)),
+        "S2": str(random.randint(15, 150)),
+        "H1": str(headers[0]), "H2": str(headers[1]),
+        "H3": str(headers[2]), "H4": str(headers[3]),
+    }
 
 def _wg_binary() -> str:
     b = shutil.which("awg") or shutil.which("wg")

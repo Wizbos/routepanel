@@ -73,17 +73,21 @@ PYEOF
 #    never fails before routesyncd has written it. routesyncd regenerates it.
 touch /etc/routepanel/dnsmasq-routepanel.conf
 
-# 5. Allow the panel port (8080) from private RFC1918 networks only (panel is
-#    LAN/VPN-restricted; no auth token). Idempotent. Persisted via netfilter-persistent.
+# 5. Allow the panel port (8080) from private networks (only reachable if you
+#    widen bind_host beyond 127.0.0.1; harmless with the default localhost
+#    bind, since password auth is enforced regardless). Idempotent; not
+#    persisted across reboot (no netfilter-persistent in this install), so
+#    routepanel-init reapplies it each run.
 for net in 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16; do
     iptables -C INPUT -p tcp -s "$net" --dport 8080 -j ACCEPT 2>/dev/null || \
     iptables -I INPUT 1 -p tcp -s "$net" --dport 8080 -j ACCEPT
 done
 
 # 6. DNS forwarding port: an upstream resolver (e.g. a site-local DNS server)
-#    may forward routed domains here to this host's dnsmasq. Private RFC1918
-#    only; WAN is blocked by the INPUT DROP policy. Idempotent. Persisted via
-#    netfilter-persistent.
+#    may forward routed domains here to this host's dnsmasq. Allowed from
+#    private networks only (only reachable if you widen resolver bind beyond
+#    localhost; harmless with the default bind). Idempotent; not persisted
+#    across reboot, so routepanel-init reapplies it each run.
 for net in 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16; do
     for proto in udp tcp; do
         iptables -C INPUT -p "$proto" -s "$net" --dport 5353 -j ACCEPT 2>/dev/null || \

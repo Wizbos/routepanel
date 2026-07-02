@@ -8,10 +8,10 @@ require_root
 PY="$PREFIX/.venv/bin/python3"; export ROUTEPANEL_CONFIG="$CONFIG"
 
 show_access() {
-    local ip pw
+    local ip
     ip="$(detect_public_ip)"; ip="${ip:-<vps-ip>}"
-    pw="$(c_info 'password is hashed; use "change password" to reset')"
     echo "  ssh -L 8080:localhost:8080 root@$ip   → http://localhost:8080"
+    c_info "panel password is hashed; use menu option 4 to reset it if forgotten"
 }
 
 emergency_client() {
