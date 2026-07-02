@@ -9,14 +9,17 @@ small web panel.
 Your devices connect to the VPS over AmneziaWG (DPI-resistant WireGuard).
 On the VPS, dnsmasq resolves your DNS and tags routed domains into ipsets;
 iptables fwmarks send matching traffic out **exit nodes** — WireGuard/AmneziaWG
-tunnels to other VPNs you paste into the panel. Everything else follows the
-default policy below.
+tunnels to other VPNs whose config you import (via the installer or the exit
+API). Everything else follows the default policy below.
 
 ## Default routing policy
-> **All client traffic goes through your first exit node. Known RU networks go
-> direct. If you have no exit nodes yet, ALL traffic goes direct from the VPS's
-> own IP.** The installer prints this at the end of setup, and the panel's
-> Exits page always shows which exit is the default.
+> **All client traffic goes through your first exit node. If you have no exit
+> nodes yet, ALL traffic goes direct from the VPS's own IP.** The installer
+> prints this at the end of setup, and the panel's History log records the
+> policy each time the default changes.
+>
+> (Populating RU-direct / forced-VPN system ranges is a planned installer
+> feature — see *Not in v1.0*.)
 
 ## Features
 - Interactive installer (Ubuntu 22.04/24.04, Debian 12) — coming in the next release
@@ -34,8 +37,9 @@ default policy below.
 
 ## Not in v1.0
 IPv6 (AAAA is suppressed for routed domains — deliberate leak prevention) ·
-VLESS/Xray exits (planned; schema ready) · Pi-hole/AdGuard multi-site sync
-(documented recipe only) · Prometheus metrics · multi-user panel · auto-updates.
+VLESS/Xray exits (planned; schema ready) · RU-direct / forced-VPN system range
+feeds · Pi-hole/AdGuard multi-site sync (documented recipe only) · Prometheus
+metrics · multi-user panel · auto-updates.
 
 ## Status & support
 This is a free-time project, provided **as is**. Further development is likely
