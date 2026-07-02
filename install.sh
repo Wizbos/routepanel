@@ -61,7 +61,7 @@ python3 -m venv "$PREFIX/.venv"
 backup_file "$CONFIG"
 cp "$PREFIX/config.yaml.example" "$CONFIG"
 sed -i "s|^wan_interface:.*|wan_interface: \"$WAN\"|" "$CONFIG"
-[[ "$RU_DIRECT" =~ ^[Yy] ]] && sed -i "s|^ru_direct:.*|ru_direct: true|" "$CONFIG"
+[[ "$RU_DIRECT" =~ ^[Yy] ]] && sed -i "s|^ru_direct:.*|ru_direct: true|" "$CONFIG" || true
 touch "$CONFDIR/db.sqlite"; chmod 600 "$CONFDIR/db.sqlite"
 
 # Server identity + password + DNS chain.
@@ -73,13 +73,13 @@ bash "$PREFIX/scripts/setup-dns.sh"
 
 # systemd units.
 for u in routepanel-init routepanel routesyncd ru-direct-refresh; do
-    [[ -f "$PREFIX/systemd/$u.service" ]] && install -m0644 "$PREFIX/systemd/$u.service" /etc/systemd/system/
+    [[ -f "$PREFIX/systemd/$u.service" ]] && install -m0644 "$PREFIX/systemd/$u.service" /etc/systemd/system/ || true
 done
 install -m0644 "$PREFIX/systemd/ru-direct-refresh.timer" /etc/systemd/system/ 2>/dev/null || true
 systemctl daemon-reload
 systemctl enable --now awg-quick@"$(awk -F'"' '/awg_interface/{print $2}' "$CONFIG")" >/dev/null 2>&1 || true
 systemctl enable --now routepanel-init routepanel routesyncd >/dev/null
-[[ "$RU_DIRECT" =~ ^[Yy] ]] && { systemctl enable --now ru-direct-refresh.timer >/dev/null; "$PREFIX/.venv/bin/python3" "$PREFIX/scripts/ru_direct_refresh.py" || true; }
+[[ "$RU_DIRECT" =~ ^[Yy] ]] && { systemctl enable --now ru-direct-refresh.timer >/dev/null; "$PREFIX/.venv/bin/python3" "$PREFIX/scripts/ru_direct_refresh.py" || true; } || true
 
 # First client + QR in the terminal.
 CID="$(ROUTEPANEL_CONFIG="$CONFIG" "$PREFIX/.venv/bin/python3" - "$CLIENT1" <<'PY'

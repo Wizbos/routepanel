@@ -52,7 +52,9 @@ ask_var() {   # ask_var ENVVAR "prompt" "default" -> env value if set, else prom
     ask "$prompt" "$def"
 }
 
-backup_file() { [[ -f "$1" ]] && cp -a "$1" "$1.bak.$(date -u +%Y%m%dT%H%M%SZ)"; }
+# Back up a file if it exists. MUST return 0 even when there's nothing to back
+# up, or `set -e` aborts the caller on the common fresh-install case (no file yet).
+backup_file() { [[ -f "$1" ]] && cp -a "$1" "$1.bak.$(date -u +%Y%m%dT%H%M%SZ)"; return 0; }
 rand_port() { shuf -i 20000-60000 -n1; }
 
 install_amneziawg() {
