@@ -44,7 +44,7 @@ esac
 
 c_info "Installing routepanel to $PREFIX…"
 mkdir -p "$PREFIX" "$CONFDIR" "$CONFDIR/exits"
-rsync -a --exclude='.git' --exclude='.superpowers' --exclude='.venv' \
+rsync -a --exclude='.superpowers' --exclude='.venv' \
       --exclude='__pycache__' --exclude='*.pyc' "$HERE/" "$PREFIX/"
 python3 -m venv "$PREFIX/.venv"
 "$PREFIX/.venv/bin/pip" install -q -e "$PREFIX"

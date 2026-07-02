@@ -44,7 +44,18 @@ MENU
                sed -i 's|^ru_direct:.*|ru_direct: true|' "$CONFIG"; ipset create -exist ru_direct hash:net; systemctl enable --now ru-direct-refresh.timer >/dev/null 2>&1 || true; "$PY" "$PREFIX/scripts/ru_direct_refresh.py" || true; c_ok "RU-direct ON"
            fi
            systemctl restart routesyncd ;;
-        6) git -C "$PREFIX" pull --ff-only && "$PREFIX/.venv/bin/pip" install -q -e "$PREFIX" && systemctl restart routepanel routesyncd && c_ok "updated" ;;
+        6) if git -C "$PREFIX" rev-parse --git-dir >/dev/null 2>&1; then
+               git -C "$PREFIX" pull --ff-only \
+                 && "$PREFIX/.venv/bin/pip" install -q -e "$PREFIX" \
+                 && systemctl restart routepanel routesyncd \
+                 && c_ok "updated"
+           else
+               c_warn "$PREFIX is not a git checkout, cannot auto-update."
+               c_info "Update by re-cloning and re-running the installer, e.g.:"
+               c_info "  git clone https://github.com/Wizbos/routepanel /tmp/rp"
+               c_info "  sudo rsync -a --exclude='.superpowers' --exclude='.venv' /tmp/rp/ $PREFIX/"
+               c_info "  sudo $PREFIX/.venv/bin/pip install -q -e $PREFIX && sudo systemctl restart routepanel routesyncd"
+           fi ;;
         7) read -r -p "Type UNINSTALL to confirm: " x </dev/tty
            [[ "$x" == "UNINSTALL" ]] && bash "$PREFIX/scripts/uninstall.sh" || c_warn "cancelled" ;;
         0) exit 0 ;;
