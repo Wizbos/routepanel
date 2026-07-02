@@ -54,6 +54,8 @@ def _maybe_push_frr(desired: set[str], cfg) -> None:
     AND at least ospf_debounce_sec elapsed since the last push, so short-TTL CDN
     churn can't flood LSAs. A skipped change is flushed on a later cycle."""
     global _last_ospf_pushed, _last_frr_sync
+    if not cfg.frr_next_hop:
+        return   # OSPF/advanced module disabled ("" default) -- never touch FRR
     if desired == _last_ospf_pushed:
         return
     now = time.monotonic()
