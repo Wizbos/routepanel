@@ -32,16 +32,20 @@ c_info "Installing packages…"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq python3-venv python3-pip iptables ipset dnsmasq dnscrypt-proxy \
-    curl ca-certificates wireguard-tools >/dev/null
+    curl ca-certificates wireguard-tools rsync >/dev/null
 
 # AmneziaWG: kernel module via DKMS, fall back to userspace amneziawg-go.
-if ! install_amneziawg; then
-    c_warn "amneziawg-dkms unavailable; using userspace amneziawg-go"
-fi
+awg_rc=0; install_amneziawg || awg_rc=$?
+case "$awg_rc" in
+    0) c_ok "AmneziaWG kernel module ready" ;;
+    1) c_warn "amneziawg-dkms unavailable; using userspace amneziawg-go" ;;
+    *) die "failed to install AmneziaWG (need amneziawg-dkms or amneziawg-go in apt)" ;;
+esac
 
 c_info "Installing routepanel to $PREFIX…"
 mkdir -p "$PREFIX" "$CONFDIR" "$CONFDIR/exits"
-cp -a "$HERE/." "$PREFIX/"
+rsync -a --exclude='.git' --exclude='.superpowers' --exclude='.venv' \
+      --exclude='__pycache__' --exclude='*.pyc' "$HERE/" "$PREFIX/"
 python3 -m venv "$PREFIX/.venv"
 "$PREFIX/.venv/bin/pip" install -q -e "$PREFIX"
 

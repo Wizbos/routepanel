@@ -44,12 +44,18 @@ backup_file() { [[ -f "$1" ]] && cp -a "$1" "$1.bak.$(date -u +%Y%m%dT%H%M%SZ)";
 rand_port() { shuf -i 20000-60000 -n1; }
 
 install_amneziawg() {
-    if command -v awg >/dev/null 2>&1 || command -v amneziawg-go >/dev/null 2>&1; then
+    # returns 0 = kernel module (awg) available, 1 = userspace amneziawg-go
+    # fallback, 2 = nothing installed (caller must abort).
+    command -v awg >/dev/null 2>&1 && return 0
+    command -v amneziawg-go >/dev/null 2>&1 && return 1
+    apt-get install -y -qq software-properties-common >/dev/null 2>&1 || true
+    if apt-get install -y -qq amneziawg-dkms amneziawg-tools >/dev/null 2>&1 \
+       && command -v awg >/dev/null 2>&1; then
         return 0
     fi
-    apt-get install -y -qq software-properties-common >/dev/null 2>&1 || true
-    if apt-get install -y -qq amneziawg-dkms amneziawg-tools >/dev/null 2>&1; then
-        command -v awg >/dev/null 2>&1 && return 0
+    if apt-get install -y -qq amneziawg-go amneziawg-tools >/dev/null 2>&1 \
+       && command -v amneziawg-go >/dev/null 2>&1; then
+        return 1
     fi
-    apt-get install -y -qq amneziawg-go amneziawg-tools >/dev/null 2>&1 && return 1 || return 1
+    return 2
 }
