@@ -62,7 +62,6 @@ async def _resolve_default():
 default_exit_id = asyncio.run(_resolve_default())
 default_fwmark = fwmark_of.get(default_exit_id, 0)
 
-srv = db2 = None
 import sqlite3 as _sq
 _c = _sq.connect("/etc/routepanel/db.sqlite"); _c.row_factory = _sq.Row
 _row = _c.execute("SELECT value FROM settings WHERE key='awg.subnet'").fetchone()

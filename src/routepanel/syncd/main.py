@@ -179,9 +179,9 @@ async def _run_sync_inner() -> None:
         # Reconcile routing every cycle: per-rule chain (failover = rebuild) +
         # ip rules + tables, so panel-added exits/rules apply without a reboot.
         from routepanel.awgserver import get_server
-        _server = await get_server(db)
-        client_subnet = _server["subnet"] if _server else None
         try:
+            _server = await get_server(db)
+            client_subnet = _server["subnet"] if _server else None
             routing_manager.reconcile(exits, rules, effective_fwmark, default_fwmark, client_subnet)
         except Exception as e:
             log.error("routing reconcile failed: %s", e)
