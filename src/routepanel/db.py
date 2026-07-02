@@ -108,5 +108,9 @@ async def open_db(path: str | None = None, autocommit: bool = False) -> aiosqlit
         cols = {r["name"] for r in await cur.fetchall()}
     if "type" not in cols:
         await db.execute("ALTER TABLE exits ADD COLUMN type TEXT NOT NULL DEFAULT 'manual'")
+    # A concurrent import must not allocate the same fwmark twice (SELECT MAX+1
+    # races across connections). Partial index: direct exits legitimately share 0.
+    await db.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_exits_fwmark ON exits(fwmark) WHERE fwmark != 0")
     await db.commit()
     return db

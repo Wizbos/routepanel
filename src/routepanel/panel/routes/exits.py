@@ -1,5 +1,6 @@
 # src/routepanel/panel/routes/exits.py
 import os
+import sqlite3
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -8,7 +9,6 @@ from routepanel import awg
 from routepanel.config import get_config
 from routepanel.panel.deps import get_db, get_actor_ip, trigger_sync
 from routepanel.panel._templates import templates
-from routepanel.settings import get_setting, set_setting
 from routepanel.syncd.health import HealthStatus
 
 router = APIRouter()
@@ -97,6 +97,13 @@ async def import_exit(data: ExitImportIn, db: aiosqlite.Connection = Depends(get
         fwmark = (await cur.fetchone())["next"]
     interface = f"rpx{fwmark}"
 
+    try:
+        await db.execute(
+            "INSERT INTO exits(id,interface,fwmark,routing_table,health_check_ip,type) VALUES(?,?,?,?,?,?)",
+            (data.id, interface, fwmark, str(fwmark), data.health_check_ip, "awg"))
+    except sqlite3.IntegrityError:
+        raise HTTPException(409, "a concurrent import allocated the same fwmark -- retry")
+
     cfg = get_config()
     os.makedirs(cfg.exit_conf_dir, exist_ok=True)
     conf_path = os.path.join(cfg.exit_conf_dir, f"{interface}.conf")
@@ -104,14 +111,12 @@ async def import_exit(data: ExitImportIn, db: aiosqlite.Connection = Depends(get
     with os.fdopen(fd, "w") as f:
         f.write(awg.render_exit_conf(tc))
 
-    await db.execute(
-        "INSERT INTO exits(id,interface,fwmark,routing_table,health_check_ip,type) VALUES(?,?,?,?,?,?)",
-        (data.id, interface, fwmark, str(fwmark), data.health_check_ip, "awg"))
-
     # First imported exit becomes the catch-all default -- announce it loudly.
-    is_default = (await get_setting(db, "default_exit_id")) is None
+    cur = await db.execute(
+        "INSERT INTO settings(key, value) VALUES('default_exit_id', ?) "
+        "ON CONFLICT(key) DO NOTHING", (data.id,))
+    is_default = cur.rowcount == 1
     if is_default:
-        await set_setting(db, "default_exit_id", data.id)
         await db.execute("INSERT INTO history(action,exit_id,detail,actor_ip) VALUES(?,?,?,?)",
                          ("policy", data.id,
                           f"default routing policy: ALL client traffic now routes via '{data.id}'", actor))
