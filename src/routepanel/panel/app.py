@@ -39,6 +39,8 @@ async def login(request: Request, password: str = Form(...)):
     if stored is None or not _auth.verify_password(password, stored):
         return JSONResponse({"detail": "wrong password"}, status_code=401)
     resp = RedirectResponse("/", status_code=303)
+    # No secure=True: the panel serves plain HTTP on 127.0.0.1 (ssh -L access
+    # model), where the flag would break login. Revisit if TLS/public bind lands.
     resp.set_cookie(_auth.COOKIE, _auth.make_session(stored),
                     httponly=True, samesite="lax", max_age=30 * 86400)
     return resp
