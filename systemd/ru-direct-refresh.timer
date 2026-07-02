@@ -1,0 +1,10 @@
+# systemd/ru-direct-refresh.timer
+[Unit]
+Description=Weekly refresh of the routepanel ru_direct ipset
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

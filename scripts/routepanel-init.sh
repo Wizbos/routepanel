@@ -14,14 +14,12 @@ if [[ -f "$IPSETS_SAVE" ]]; then
     ipset restore -exist < "$IPSETS_SAVE" || true
 fi
 
-# 2. Ensure any system ipsets a deployment has configured exist before the
-#    ROUTEPANEL chain (which references them via --match-set) is built. Empty
-#    in the OSS default (routing_manager.SYSTEM_IPSETS is []) -- add names here
-#    if your deployment populates SYSTEM_IPSETS with custom overrides.
-SYSTEM_IPSET_NAMES=()
-for name in "${SYSTEM_IPSET_NAMES[@]}"; do
-    ipset create -exist "$name" hash:net
-done
+# 2. Ensure system ipsets referenced by the ROUTEPANEL chain exist first.
+#    ru_direct is created (empty) here when enabled; the ru-direct-refresh timer
+#    fills it. rebuild_chain also gates on existence, so an empty set is safe.
+if grep -qE '^[[:space:]]*ru_direct:[[:space:]]*true' /etc/routepanel/config.yaml 2>/dev/null; then
+    ipset create -exist ru_direct hash:net
+fi
 
 # 3. Ensure per-rule ipsets + apply routing (ip rules, tables, owned chain).
 #    Use the venv interpreter so `import routepanel...` resolves, and rely on

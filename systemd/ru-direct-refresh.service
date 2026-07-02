@@ -1,0 +1,10 @@
+# systemd/ru-direct-refresh.service
+[Unit]
+Description=Refresh routepanel ru_direct ipset from the RU zone feed
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=ROUTEPANEL_CONFIG=/etc/routepanel/config.yaml
+ExecStart=/opt/routepanel/.venv/bin/python3 /opt/routepanel/scripts/ru_direct_refresh.py
