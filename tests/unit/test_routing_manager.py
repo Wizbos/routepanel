@@ -98,3 +98,22 @@ def test_ensure_client_nat_noop_without_subnet():
     with patch("subprocess.run") as run:
         rm.ensure_client_nat(None, [], "eth0")
     run.assert_not_called()
+
+def test_system_ipsets_empty_by_default():
+    from routepanel.config import Config
+    assert rm.system_ipsets(Config()) == []
+
+def test_system_ipsets_includes_ru_direct_when_enabled():
+    from routepanel.config import Config
+    assert rm.system_ipsets(Config(ru_direct=True)) == [("ru_direct", "clear")]
+
+def test_rebuild_chain_marks_ru_direct_when_enabled():
+    from routepanel.config import Config
+    appended = []
+    with patch("routepanel.syncd.routing_manager.get_config", return_value=Config(ru_direct=True)), \
+         patch.object(rm, "ipset_exists", return_value=True), \
+         patch("subprocess.run") as run:
+        run.side_effect = lambda args, **kw: appended.append(args) or MagicMock(returncode=0)
+        rm.rebuild_chain([], {}, default_fwmark=0)
+    assert ["-m", "set", "--match-set", "ru_direct", "dst",
+            "-j", "MARK", "--and-mark", "0x0"] in [a[5:] for a in appended if len(a) > 5]

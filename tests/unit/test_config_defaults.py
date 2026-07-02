@@ -11,3 +11,8 @@ def test_oss_defaults():
     assert c.awg_interface == "awg0"
     assert not hasattr(c, "agh_targets")
     assert not hasattr(c, "dnsmasq_forward_target")
+
+def test_ru_direct_defaults_off():
+    c = Config()
+    assert c.ru_direct is False
+    assert c.ru_direct_url.startswith("https://")

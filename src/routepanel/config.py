@@ -31,6 +31,8 @@ class Config:
     exit_conf_dir: str = "/etc/routepanel/exits"          # imported exit tunnel confs (rpx<N>.conf)
     awg_conf_path: str = "/etc/amnezia/amneziawg/awg0.conf"  # the client-facing AWG server config
     awg_interface: str = "awg0"
+    ru_direct: bool = False              # route known RU networks direct (ru_direct ipset)
+    ru_direct_url: str = "https://www.ipdeny.com/ipblocks/data/aggregated/ru-aggregated.zone"
 
 _config: Config | None = None
 

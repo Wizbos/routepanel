@@ -2,7 +2,7 @@
 import subprocess
 import logging
 from routepanel.config import get_config
-from routepanel.syncd import ipset_manager
+from routepanel.syncd.ipset_manager import ipset_exists
 
 log = logging.getLogger("routesyncd")
 
@@ -13,10 +13,19 @@ _PROTECTED_TABLES = {"main", "local", "default"}
 
 CHAIN = "ROUTEPANEL"   # owned mangle chain -- flushed + rebuilt in precedence order
 
-# System-wide ipset overrides applied before per-rule matches. Empty in the OSS
-# build: population of RU-direct / forced-VPN sets is a future (installer/advanced)
-# feature. Kept as a seam so a deployment can add its own without touching rebuild_chain.
+# Extra system ipsets a deployment hard-codes (name, action). Usually empty;
+# config-driven sets (RU-direct) are added by system_ipsets().
 SYSTEM_IPSETS: list = []
+
+def system_ipsets(cfg=None) -> list:
+    """System-wide ipset overrides applied before per-rule matches. 'clear' = force
+    direct, an int = force that fwmark. Built from config so a plain install can turn
+    RU-direct on without code edits."""
+    cfg = cfg or get_config()
+    sets = list(SYSTEM_IPSETS)
+    if getattr(cfg, "ru_direct", False):
+        sets.append(("ru_direct", "clear"))      # RU networks -> direct egress
+    return sets
 
 # Private destinations must NEVER be marked toward the VPN -- the catch-all
 # default would otherwise send LAN-internal traffic out the exit's tunnel. Cleared
@@ -68,8 +77,8 @@ def rebuild_chain(rules: list[dict], effective_fwmark: dict, default_fwmark: int
     # normally created by routepanel-init.sh at boot, but routesyncd can race that
     # script (or a set can be dropped later); `--match-set <missing>` makes
     # iptables -A fail, which must not abort the rest of the chain rebuild.
-    for name, action in SYSTEM_IPSETS:
-        if not ipset_manager.ipset_exists(name):
+    for name, action in system_ipsets():
+        if not ipset_exists(name):
             log.error("system ipset '%s' missing; skipping its chain rule this cycle", name)
             continue
         if action == "clear":

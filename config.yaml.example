@@ -38,3 +38,8 @@ password_file: "/etc/routepanel/panel.passwd"
 exit_conf_dir: "/etc/routepanel/exits"
 awg_conf_path: "/etc/amnezia/amneziawg/awg0.conf"
 awg_interface: "awg0"
+
+# Route known Russian networks directly (populates + matches the ru_direct ipset).
+# Enable via the installer; the ru-direct-refresh timer keeps the set current.
+ru_direct: false
+ru_direct_url: "https://www.ipdeny.com/ipblocks/data/aggregated/ru-aggregated.zone"
