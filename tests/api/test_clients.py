@@ -64,3 +64,17 @@ async def test_duplicate_name_422(awg_client):
         await awg_client.post("/clients", json={"name": "dup"})
         r = await awg_client.post("/clients", json={"name": "dup"})
     assert r.status_code == 422
+
+async def test_bad_name_rejected(awg_client):
+    r = await awg_client.post("/clients", json={"name": 'my"dev\r\nice'})
+    assert r.status_code == 422
+
+async def test_conf_and_qr_no_store(awg_client):
+    with patch("routepanel.awgserver.gen_keypair", return_value=("CPRIV=","CPUB=")), \
+         patch("routepanel.awgserver.gen_psk", return_value="PSK="), \
+         patch("subprocess.run"):
+        cid = (await awg_client.post("/clients", json={"name": "cacheck"})).json()["id"]
+    conf = await awg_client.get(f"/clients/{cid}/conf")
+    qr = await awg_client.get(f"/clients/{cid}/qr")
+    assert conf.headers["cache-control"] == "no-store"
+    assert qr.headers["cache-control"] == "no-store"
