@@ -170,6 +170,12 @@ async def _run_sync_inner() -> None:
             ipset_manager.destroy_ipset(gone)
             _last_effective.pop(gone, None)
 
+        from routepanel.syncd import exit_iface_manager
+        try:
+            exit_iface_manager.reconcile_interfaces(exits, cfg.exit_conf_dir)
+        except Exception as e:
+            log.error("exit interface reconcile failed: %s", e)
+
         # Reconcile routing every cycle: per-rule chain (failover = rebuild) +
         # ip rules + tables, so panel-added exits/rules apply without a reboot.
         try:

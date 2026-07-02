@@ -1,10 +1,14 @@
 # src/routepanel/panel/routes/exits.py
+import os
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 import aiosqlite
+from routepanel import awg
+from routepanel.config import get_config
 from routepanel.panel.deps import get_db, get_actor_ip, trigger_sync
 from routepanel.panel._templates import templates
+from routepanel.settings import get_setting, set_setting
 from routepanel.syncd.health import HealthStatus
 
 router = APIRouter()
@@ -72,3 +76,48 @@ async def delete_exit(exit_id: str, db: aiosqlite.Connection = Depends(get_db),
     await db.commit()
     trigger_sync()   # rebuild the ROUTEPANEL chain without the deleted exit
     return {"ok": True}
+
+class ExitImportIn(BaseModel):
+    id: str
+    conf_text: str
+    health_check_ip: str = "1.1.1.1"
+
+@router.post("/exits/import")
+async def import_exit(data: ExitImportIn, db: aiosqlite.Connection = Depends(get_db),
+                      actor: str = Depends(get_actor_ip)):
+    try:
+        tc = awg.parse_tunnel_conf(data.conf_text)
+    except awg.ConfError as e:
+        raise HTTPException(422, f"config not accepted: {e}")
+    async with db.execute("SELECT 1 FROM exits WHERE id=?", (data.id,)) as cur:
+        if await cur.fetchone():
+            raise HTTPException(422, f"exit '{data.id}' already exists")
+
+    async with db.execute("SELECT COALESCE(MAX(fwmark), 99) + 1 AS next FROM exits") as cur:
+        fwmark = (await cur.fetchone())["next"]
+    interface = f"rpx{fwmark}"
+
+    cfg = get_config()
+    os.makedirs(cfg.exit_conf_dir, exist_ok=True)
+    conf_path = os.path.join(cfg.exit_conf_dir, f"{interface}.conf")
+    fd = os.open(conf_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(awg.render_exit_conf(tc))
+
+    await db.execute(
+        "INSERT INTO exits(id,interface,fwmark,routing_table,health_check_ip,type) VALUES(?,?,?,?,?,?)",
+        (data.id, interface, fwmark, str(fwmark), data.health_check_ip, "awg"))
+
+    # First imported exit becomes the catch-all default -- announce it loudly.
+    is_default = (await get_setting(db, "default_exit_id")) is None
+    if is_default:
+        await set_setting(db, "default_exit_id", data.id)
+        await db.execute("INSERT INTO history(action,exit_id,detail,actor_ip) VALUES(?,?,?,?)",
+                         ("policy", data.id,
+                          f"default routing policy: ALL client traffic now routes via '{data.id}'", actor))
+    await db.execute("INSERT INTO history(action,exit_id,detail,actor_ip) VALUES(?,?,?,?)",
+                     ("added", data.id,
+                      f"imported {'AWG' if tc.is_awg else 'WG'} exit: {interface} fwmark={fwmark}", actor))
+    await db.commit()
+    trigger_sync()
+    return {"ok": True, "interface": interface, "fwmark": fwmark, "default": is_default}
