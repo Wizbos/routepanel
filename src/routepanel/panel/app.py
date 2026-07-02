@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from routepanel.panel.routes import domains, exits, library, history, clients
+from routepanel.panel.routes import domains, exits, library, history, clients, health
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -21,6 +21,7 @@ app.include_router(exits.router)
 app.include_router(clients.router)
 app.include_router(library.router)
 app.include_router(history.router)
+app.include_router(health.router)
 
 from fastapi import Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
