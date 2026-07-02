@@ -34,10 +34,17 @@ protect_ssh() {
     c_ok "SSH port $p kept open"
 }
 
-ask() {   # ask "prompt" "default" -> echoes answer
+ask() {   # ask "prompt" "default" -> echoes answer (default if no tty)
     local prompt="$1" def="$2" ans
-    read -r -p "$prompt [$def]: " ans </dev/tty
+    if [[ ! -r /dev/tty ]]; then echo "$def"; return; fi
+    read -r -p "$prompt [$def]: " ans </dev/tty || { echo "$def"; return; }
     echo "${ans:-$def}"
+}
+
+ask_var() {   # ask_var ENVVAR "prompt" "default" -> env value if set, else prompt/default
+    local var="$1" prompt="$2" def="$3"
+    if [[ -n "${!var:-}" ]]; then echo "${!var}"; return; fi
+    ask "$prompt" "$def"
 }
 
 backup_file() { [[ -f "$1" ]] && cp -a "$1" "$1.bak.$(date -u +%Y%m%dT%H%M%SZ)"; }

@@ -16,17 +16,26 @@ check_os
 SSH_PORT="$(detect_ssh_port)"; SSH_PORT="${SSH_PORT:-22}"
 protect_ssh "$SSH_PORT"
 
+# All prompts accept a matching RP_* env var for unattended installs:
+#   RP_PUBIP RP_AWG_PORT RP_SUBNET RP_CLIENT RP_PASSWORD RP_RU_DIRECT
+# With no env var AND no tty, each falls back to its default (RP_PASSWORD -> auto).
 WAN="$(detect_wan_iface)"; [[ -n "$WAN" ]] || die "could not detect the WAN interface"
-PUBIP="$(detect_public_ip)"
+PUBIP="${RP_PUBIP:-$(detect_public_ip)}"
 [[ -n "$PUBIP" ]] || PUBIP="$(ask 'Public IPv4 of this VPS' '')"
 [[ -n "$PUBIP" ]] || die "need a public IPv4 for client configs"
 
-AWG_PORT="$(ask 'AmneziaWG UDP port' "$(rand_port)")"
-SUBNET="$(ask 'Client tunnel subnet' '10.8.0.0/24')"
-CLIENT1="$(ask 'First client (device) name' 'phone')"
-read -r -s -p "Panel password (blank = auto-generate): " PW </dev/tty; echo
+AWG_PORT="$(ask_var RP_AWG_PORT 'AmneziaWG UDP port' "$(rand_port)")"
+SUBNET="$(ask_var RP_SUBNET 'Client tunnel subnet' '10.8.0.0/24')"
+CLIENT1="$(ask_var RP_CLIENT 'First client (device) name' 'phone')"
+if [[ -n "${RP_PASSWORD:-}" ]]; then
+    PW="$RP_PASSWORD"
+elif [[ -r /dev/tty ]]; then
+    read -r -s -p "Panel password (blank = auto-generate): " PW </dev/tty; echo
+else
+    PW=""
+fi
 [[ -n "$PW" ]] || { PW="$(head -c12 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c16)"; c_info "generated panel password: $PW"; }
-RU_DIRECT="$(ask 'Route known RU networks direct? (yes/no)' 'yes')"
+RU_DIRECT="$(ask_var RP_RU_DIRECT 'Route known RU networks direct? (yes/no)' 'yes')"
 
 c_info "Installing packages…"
 export DEBIAN_FRONTEND=noninteractive
