@@ -1,9 +1,8 @@
 # src/routepanel/panel/deps.py
 import os, signal
 import aiosqlite
-from fastapi import Request, HTTPException
+from fastapi import Request
 from routepanel.db import open_db
-from routepanel.config import get_config
 
 async def get_db() -> aiosqlite.Connection:
     db = await open_db()
@@ -26,14 +25,3 @@ def trigger_sync() -> None:
                 os.kill(int(f.read().strip()), signal.SIGUSR1)
         except (ProcessLookupError, ValueError, FileNotFoundError):
             pass
-
-def check_auth(request: Request) -> None:
-    """Optional defence-in-depth (spec §12). No-op unless `auth_token` is set in
-    config. To enable for the JSON API, add `dependencies=[Depends(check_auth)]`
-    to the routers; a browser-login flow for the HTML UI is out of scope for v1."""
-    cfg = get_config()
-    if not cfg.auth_token:
-        return
-    token = request.headers.get("X-Auth-Token") or request.cookies.get("rp_token")
-    if token != cfg.auth_token:
-        raise HTTPException(401, "unauthorized")

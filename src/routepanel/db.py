@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS exits (
     routing_table TEXT NOT NULL DEFAULT 'main',
     health_check_ip TEXT NOT NULL DEFAULT '1.1.1.1',
     fallback_exit_id TEXT REFERENCES exits(id),
-    priority INTEGER NOT NULL DEFAULT 0
+    priority INTEGER NOT NULL DEFAULT 0,
+    type TEXT NOT NULL DEFAULT 'manual'
 );
 
 -- Runtime health, written by routesyncd's health loop so the panel
@@ -63,6 +64,23 @@ CREATE TABLE IF NOT EXISTS service_library (
     cidrs TEXT NOT NULL DEFAULT '[]',          -- JSON array of stable prefixes copied into a rule's static_cidrs
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS clients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    public_key TEXT NOT NULL,
+    private_key TEXT NOT NULL,
+    psk TEXT NOT NULL,
+    address TEXT NOT NULL UNIQUE,     -- tunnel IP, no mask
+    enabled INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    revoked_at TEXT
+);
 """
 
 async def open_db(path: str | None = None, autocommit: bool = False) -> aiosqlite.Connection:
@@ -85,5 +103,10 @@ async def open_db(path: str | None = None, autocommit: bool = False) -> aiosqlit
     await db.execute("PRAGMA busy_timeout=15000")
     await db.execute("PRAGMA foreign_keys=ON")
     await db.executescript(SCHEMA)
+    # Lightweight migrations for databases created before a column existed.
+    async with db.execute("PRAGMA table_info(exits)") as cur:
+        cols = {r["name"] for r in await cur.fetchall()}
+    if "type" not in cols:
+        await db.execute("ALTER TABLE exits ADD COLUMN type TEXT NOT NULL DEFAULT 'manual'")
     await db.commit()
     return db

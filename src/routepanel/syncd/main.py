@@ -3,6 +3,7 @@ import asyncio, json, os, signal, logging, time
 import aiosqlite
 from routepanel.config import get_config
 from routepanel.db import open_db
+from routepanel.settings import get_default_exit_id
 from routepanel.syncd.resolver import resolve_domains
 from routepanel.syncd.health import check_exit, ExitHealth, HealthStatus
 from routepanel.syncd import ipset_manager, frr_manager, routing_manager, dnsmasq_manager
@@ -99,12 +100,13 @@ async def _run_sync_inner() -> None:
         ospf_desired: set[str] = set()           # full prefixes (static CIDRs + /32 live)
 
         # Default catch-all is failover-aware too (default_exit_id + fallback chain).
+        default_exit_id = await get_default_exit_id(db, cfg)
         default_eff = await get_effective_exit(
-            db, cfg.default_exit_id, None, _health, _last_default, cfg.failback_min_dwell_sec
+            db, default_exit_id, None, _health, _last_default, cfg.failback_min_dwell_sec
         )
-        baseline = _last_default or cfg.default_exit_id
+        baseline = _last_default or default_exit_id
         if default_eff != baseline:
-            action = "failback" if default_eff == cfg.default_exit_id else "failover"
+            action = "failback" if default_eff == default_exit_id else "failover"
             await db.execute("INSERT INTO history(action,exit_id,detail) VALUES(?,?,?)",
                              (action, default_eff, f"default {baseline} -> {default_eff}"))
         _last_default = default_eff

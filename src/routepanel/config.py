@@ -4,7 +4,7 @@ import os, yaml
 
 @dataclass
 class Config:
-    bind_host: str = "10.255.99.30"
+    bind_host: str = "127.0.0.1"          # panel: localhost by default; access via ssh -L
     port: int = 8080
     db_path: str = "/etc/routepanel/db.sqlite"
     ipsets_save_path: str = "/etc/routepanel/ipsets.save"
@@ -14,9 +14,9 @@ class Config:
     health_down_threshold: int = 3
     health_up_threshold: int = 3          # consecutive successes before DOWN->UP (anti-flap)
     failback_min_dwell_sec: int = 300     # stay on fallback this long before returning to recovered primary
-    default_exit_id: str = "doprax"       # catch-all exit; failover-aware via its fallback chain
-    client_interfaces: list = field(default_factory=lambda: ["awg0","docker0","amn0","wg-vermont"])
-    frr_next_hop: str = "Null0"
+    default_exit_id: str = ""             # "" -> DB setting or 'direct' (see settings.get_default_exit_id)
+    client_interfaces: list = field(default_factory=lambda: ["awg0"])
+    frr_next_hop: str = ""                # advanced/OSPF module only; "" = OSPF disabled
     wan_interface: str = "eth0"   # direct-exit (OSPF-distributed) traffic is MASQUERADEd out this iface
     dns_intercept: bool = True
     dnsmasq_conf_path: str = "/etc/routepanel/dnsmasq-routepanel.conf"
@@ -27,9 +27,10 @@ class Config:
     ipset_timeout_sec: int = 86400   # per-member ipset timeout (auto-expiry)
     resolver_address: str = "127.0.0.1"   # daemon resolves via the VPS dnsmasq (same answers clients get)
     resolver_port: int = 5353
-    dnsmasq_forward_target: str = "10.255.99.30:5353"   # what site AGHs forward routed domains to
-    agh_targets: list = field(default_factory=list)     # [{name,url,user,password}]; empty = no AGH push
-    auth_token: str = ""
+    password_file: str = "/etc/routepanel/panel.passwd"   # absent file = auth disabled (installer always creates it)
+    exit_conf_dir: str = "/etc/routepanel/exits"          # imported exit tunnel confs (rpx<N>.conf)
+    awg_conf_path: str = "/etc/amnezia/amneziawg/awg0.conf"  # the client-facing AWG server config
+    awg_interface: str = "awg0"
 
 _config: Config | None = None
 
