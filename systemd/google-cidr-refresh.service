@@ -1,7 +1,0 @@
-# systemd/google-cidr-refresh.service
-[Unit]
-Description=Refresh Google/YouTube CIDRs for routepanel
-After=routepanel.service
-[Service]
-Type=oneshot
-ExecStart=/opt/routepanel/scripts/google-cidr-refresh.sh

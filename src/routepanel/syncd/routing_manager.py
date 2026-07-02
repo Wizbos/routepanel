@@ -13,15 +13,14 @@ _PROTECTED_TABLES = {"main", "local", "default"}
 
 CHAIN = "ROUTEPANEL"   # owned mangle chain -- flushed + rebuilt in precedence order
 
-SYSTEM_IPSETS = [
-    ("ru_ranges",       "clear"),   # -> direct
-    ("ru_government",   "clear"),   # -> direct
-    ("telegram_ranges", 100),       # -> forced VPN
-]
+# System-wide ipset overrides applied before per-rule matches. Empty in the OSS
+# build: population of RU-direct / forced-VPN sets is a future (installer/advanced)
+# feature. Kept as a seam so a deployment can add its own without touching rebuild_chain.
+SYSTEM_IPSETS: list = []
 
-# Private/corp destinations must NEVER be marked toward the VPN -- the catch-all
-# default would otherwise send corp-internal traffic out doprax. Cleared right
-# after the default mark.
+# Private destinations must NEVER be marked toward the VPN -- the catch-all
+# default would otherwise send LAN-internal traffic out the exit's tunnel. Cleared
+# right after the default mark.
 LOCAL_DIRECT = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"]
 
 def _ifaces() -> list[str]:

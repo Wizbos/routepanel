@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS domain_rules (
     exit_id TEXT NOT NULL REFERENCES exits(id),
     fallback_override_id TEXT REFERENCES exits(id),
     ospf_distribute INTEGER NOT NULL DEFAULT 0,
-    static_cidrs TEXT NOT NULL DEFAULT '[]',   -- JSON array of stable prefixes (corp OSPF + rule ipset)
+    static_cidrs TEXT NOT NULL DEFAULT '[]',   -- JSON array of stable prefixes, advertised via OSPF when a rule enables it, and seeded into the rule's ipset
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 CREATE TABLE IF NOT EXISTS clients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
     public_key TEXT NOT NULL,
     private_key TEXT NOT NULL,
     psk TEXT NOT NULL,
@@ -112,5 +112,9 @@ async def open_db(path: str | None = None, autocommit: bool = False) -> aiosqlit
     # races across connections). Partial index: direct exits legitimately share 0.
     await db.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_exits_fwmark ON exits(fwmark) WHERE fwmark != 0")
+    # Only ACTIVE clients need unique names -- a revoked client's name can be
+    # reused (e.g. re-issuing "phone" after the old cert was revoked).
+    await db.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_clients_active_name ON clients(name) WHERE enabled=1")
     await db.commit()
     return db

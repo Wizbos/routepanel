@@ -69,6 +69,15 @@ async def test_bad_name_rejected(awg_client):
     r = await awg_client.post("/clients", json={"name": 'my"dev\r\nice'})
     assert r.status_code == 422
 
+async def test_revoked_name_can_be_reused(awg_client):
+    with patch("routepanel.awgserver.gen_keypair", return_value=("CPRIV=","CPUB=")), \
+         patch("routepanel.awgserver.gen_psk", return_value="PSK="), \
+         patch("subprocess.run"):
+        cid = (await awg_client.post("/clients", json={"name": "phone"})).json()["id"]
+        await awg_client.post(f"/clients/{cid}/revoke")
+        r = await awg_client.post("/clients", json={"name": "phone"})   # reuse after revoke
+    assert r.status_code == 200
+
 async def test_conf_and_qr_no_store(awg_client):
     with patch("routepanel.awgserver.gen_keypair", return_value=("CPRIV=","CPUB=")), \
          patch("routepanel.awgserver.gen_psk", return_value="PSK="), \

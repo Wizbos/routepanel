@@ -44,7 +44,9 @@ async def add_client(data: ClientIn, db: aiosqlite.Connection = Depends(get_db),
     if not _NAME_RE.fullmatch(name):
         raise HTTPException(422, "client name must be 1-63 chars: letters, digits, dot, dash, underscore")
     server = await _require_server(db)
-    async with db.execute("SELECT 1 FROM clients WHERE name=?", (name,)) as cur:
+    # Only an ACTIVE client with this name blocks reuse -- a revoked client's
+    # name is free to reissue (matches idx_clients_active_name).
+    async with db.execute("SELECT 1 FROM clients WHERE name=? AND enabled=1", (name,)) as cur:
         if await cur.fetchone():
             raise HTTPException(422, f"client '{name}' already exists")
     async with db.execute("SELECT address FROM clients") as cur:
