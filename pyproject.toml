@@ -17,6 +17,7 @@ dependencies = [
     "dnspython>=2.6",
     "pyyaml>=6.0",
     "python-multipart>=0.0.9",
+    "qrcode>=7.4",
 ]
 
 [project.scripts]

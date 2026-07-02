@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from routepanel.panel.routes import domains, exits, library, history
+from routepanel.panel.routes import domains, exits, library, history, clients
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -18,6 +18,7 @@ app = FastAPI(lifespan=lifespan, title="routepanel")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 app.include_router(domains.router)
 app.include_router(exits.router)
+app.include_router(clients.router)
 app.include_router(library.router)
 app.include_router(history.router)
 

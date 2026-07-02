@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Clients</h2>
+{% if not server %}
+<p class="warn">AWG server is not initialized yet — run <code>routepanel-awg-init</code> on the host.</p>
+{% endif %}
+<form onsubmit="addClient(event)">
+  <input id="client-name" placeholder="Device name (e.g. phone)">
+  <button class="btn" type="submit">Add client</button>
+</form>
+<table class="tbl">
+  <tr><th>Name</th><th>Tunnel IP</th><th>Status</th><th>Created</th><th></th></tr>
+  {% for c in clients %}
+  <tr>
+    <td>{{ c.name }}</td><td>{{ c.address }}</td>
+    <td>{{ "active" if c.enabled else "revoked " ~ (c.revoked_at or "") }}</td>
+    <td>{{ c.created_at }}</td>
+    <td>
+      {% if c.enabled %}
+      <a class="btn" href="/clients/{{ c.id }}/conf">.conf</a>
+      <a class="btn" href="/clients/{{ c.id }}/qr" target="_blank">QR</a>
+      <button class="btn" onclick="revokeClient({{ c.id }})">Revoke</button>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+<script>
+async function addClient(e) {
+  e.preventDefault();
+  const name = document.getElementById('client-name').value.trim();
+  if (!name) return;
+  const r = await fetch('/clients', {method:'POST', headers:{'Content-Type':'application/json'},
+                                     body: JSON.stringify({name})});
+  if (!r.ok) { alert((await r.json()).detail); return; }
+  location.reload();
+}
+async function revokeClient(id) {
+  if (!confirm('Revoke this client? Its config stops working immediately.')) return;
+  const r = await fetch(`/clients/${id}/revoke`, {method:'POST'});
+  if (!r.ok) { alert((await r.json()).detail); return; }
+  location.reload();
+}
+</script>
+{% endblock %}
