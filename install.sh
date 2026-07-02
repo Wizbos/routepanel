@@ -34,13 +34,12 @@ apt-get update -qq
 apt-get install -y -qq python3-venv python3-pip iptables ipset dnsmasq dnscrypt-proxy \
     curl ca-certificates wireguard-tools rsync >/dev/null
 
-# AmneziaWG: kernel module via DKMS, fall back to userspace amneziawg-go.
-awg_rc=0; install_amneziawg || awg_rc=$?
-case "$awg_rc" in
-    0) c_ok "AmneziaWG kernel module ready" ;;
-    1) c_warn "amneziawg-dkms unavailable; using userspace amneziawg-go" ;;
-    *) die "failed to install AmneziaWG (need amneziawg-dkms or amneziawg-go in apt)" ;;
-esac
+# AmneziaWG: kernel module from the amnezia PPA, built via DKMS.
+if install_amneziawg; then
+    c_ok "AmneziaWG kernel module ready"
+else
+    die "could not install AmneziaWG — ensure linux-headers-$(uname -r) is available (or install amneziawg manually), then re-run"
+fi
 
 c_info "Installing routepanel to $PREFIX…"
 mkdir -p "$PREFIX" "$CONFDIR" "$CONFDIR/exits"

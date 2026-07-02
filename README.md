@@ -23,7 +23,7 @@ API). Everything else follows the default policy below.
 > [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Quick start
-On a fresh Ubuntu 22.04/24.04 or Debian 12 VPS, as root:
+On a fresh Ubuntu 22.04 or 24.04 VPS, as root:
 
     apt-get install -y git
     git clone https://github.com/Wizbos/routepanel && cd routepanel
@@ -39,7 +39,7 @@ uninstall).
 See [docs/INSTALL.md](docs/INSTALL.md) for the full install reference.
 
 ## Features
-- Interactive installer (Ubuntu 22.04/24.04, Debian 12): first-run wizard,
+- Interactive installer (Ubuntu 22.04/24.04): first-run wizard,
   then a re-run management menu (status, access, emergency client, password,
   RU-direct toggle, git-aware update, uninstall)
 - Client management in the panel: add a device, scan a QR, done

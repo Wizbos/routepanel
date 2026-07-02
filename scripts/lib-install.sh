@@ -17,8 +17,8 @@ check_os() {
     [[ -r /etc/os-release ]] || die "unsupported OS (no /etc/os-release)"
     . /etc/os-release
     case "$ID:$VERSION_ID" in
-        ubuntu:22.04|ubuntu:24.04|debian:12) c_ok "OS $PRETTY_NAME supported" ;;
-        *) die "unsupported OS '$PRETTY_NAME' — need Ubuntu 22.04/24.04 or Debian 12" ;;
+        ubuntu:22.04|ubuntu:24.04) c_ok "OS $PRETTY_NAME supported" ;;
+        *) die "unsupported OS '$PRETTY_NAME' — need Ubuntu 22.04 or 24.04 (Debian support planned)" ;;
     esac
 }
 
@@ -44,18 +44,18 @@ backup_file() { [[ -f "$1" ]] && cp -a "$1" "$1.bak.$(date -u +%Y%m%dT%H%M%SZ)";
 rand_port() { shuf -i 20000-60000 -n1; }
 
 install_amneziawg() {
-    # returns 0 = kernel module (awg) available, 1 = userspace amneziawg-go
-    # fallback, 2 = nothing installed (caller must abort).
+    # AmneziaWG is NOT in the stock Ubuntu repos — it ships in the maintainers'
+    # PPA and installs as a DKMS kernel module (needs the running kernel's headers
+    # + a compiler). Returns 0 if `awg` ends up available, 2 if it could not be
+    # installed (caller aborts). Idempotent: a pre-existing `awg` short-circuits.
     command -v awg >/dev/null 2>&1 && return 0
-    command -v amneziawg-go >/dev/null 2>&1 && return 1
-    apt-get install -y -qq software-properties-common >/dev/null 2>&1 || true
-    if apt-get install -y -qq amneziawg-dkms amneziawg-tools >/dev/null 2>&1 \
-       && command -v awg >/dev/null 2>&1; then
-        return 0
-    fi
-    if apt-get install -y -qq amneziawg-go amneziawg-tools >/dev/null 2>&1 \
-       && command -v amneziawg-go >/dev/null 2>&1; then
-        return 1
-    fi
+    c_info "Adding the AmneziaWG PPA and building the kernel module (can take a minute)…"
+    command -v add-apt-repository >/dev/null 2>&1 \
+        || apt-get install -y -qq software-properties-common >/dev/null 2>&1 || true
+    add-apt-repository -y ppa:amnezia/ppa >/dev/null 2>&1 || true
+    apt-get update -qq || true
+    apt-get install -y -qq dkms "linux-headers-$(uname -r)" build-essential >/dev/null 2>&1 || true
+    apt-get install -y -qq amneziawg-dkms amneziawg-tools >/dev/null 2>&1 || true
+    command -v awg >/dev/null 2>&1 && return 0
     return 2
 }

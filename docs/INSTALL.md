@@ -9,7 +9,9 @@ The installer checks `/etc/os-release` and refuses to run anywhere else:
 
 - Ubuntu 22.04 LTS
 - Ubuntu 24.04 LTS
-- Debian 12 ("bookworm")
+
+(Debian 12 support is planned — AmneziaWG's PPA, which the installer uses to
+build the kernel module, is currently Ubuntu-only.)
 
 It is IPv4-only end to end — AAAA answers are suppressed for routed domains
 by design, as a deliberate leak-prevention measure, not a gap to be filled
@@ -34,7 +36,7 @@ the correct command to re-run later.
 
 The wizard, in order:
 
-1. **OS check** — verifies Ubuntu 22.04/24.04 or Debian 12, aborts otherwise.
+1. **OS check** — verifies Ubuntu 22.04 or 24.04, aborts otherwise. (Debian 12 support is planned; AmneziaWG's PPA is currently Ubuntu-only.)
 2. **SSH-port protection** — detects the live `sshd` port and inserts an
    `iptables` ACCEPT rule for it *before* touching anything else, so a
    half-finished install can never lock you out over SSH.
