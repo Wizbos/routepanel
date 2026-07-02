@@ -1,3 +1,4 @@
+import os, time
 from unittest.mock import patch, MagicMock, call
 from routepanel.syncd import exit_iface_manager as eim
 
@@ -25,7 +26,9 @@ def test_skips_present_iface(tmp_path):
     assert all(c.args[0][0] == "ip" for c in run.call_args_list)
 
 def test_orphan_conf_archived_not_deleted(tmp_path):
-    (tmp_path / "rpx102.conf").write_text("[Interface]\n")   # no exit row for it
+    conf = tmp_path / "rpx102.conf"
+    conf.write_text("[Interface]\n")   # no exit row for it
+    old = time.time() - 4000; os.utime(str(conf), (old, old))   # older than grace
     with patch("subprocess.run") as run, patch("shutil.which", return_value="/usr/bin/awg-quick"):
         run.return_value = MagicMock(returncode=0)
         eim.reconcile_interfaces(_exits(), str(tmp_path))
@@ -34,3 +37,20 @@ def test_orphan_conf_archived_not_deleted(tmp_path):
     assert len(archived) == 1                                 # archived, never unlinked
     downs = [c for c in run.call_args_list if c.args[0][:2] == ["awg-quick", "down"]]
     assert len(downs) == 1
+
+def test_fresh_orphan_conf_not_archived(tmp_path):
+    conf = tmp_path / "rpx102.conf"; conf.write_text("[Interface]\n")   # no exit row, just created
+    with patch("subprocess.run") as run, patch("shutil.which", return_value="/usr/bin/awg-quick"):
+        run.return_value = MagicMock(returncode=0)
+        eim.reconcile_interfaces(_exits(), str(tmp_path), grace_sec=600)
+    assert conf.exists()                                    # within grace -> preserved
+    assert not list(tmp_path.glob("rpx102.conf.revoked-*"))
+
+def test_old_orphan_conf_archived(tmp_path):
+    conf = tmp_path / "rpx102.conf"; conf.write_text("[Interface]\n")
+    old = time.time() - 4000; os.utime(conf, (old, old))    # older than grace
+    with patch("subprocess.run") as run, patch("shutil.which", return_value="/usr/bin/awg-quick"):
+        run.return_value = MagicMock(returncode=0)
+        eim.reconcile_interfaces(_exits(), str(tmp_path), grace_sec=600)
+    assert not conf.exists()
+    assert len(list(tmp_path.glob("rpx102.conf.revoked-*"))) == 1

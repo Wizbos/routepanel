@@ -13,7 +13,7 @@ def _iface_present(name: str) -> bool:
     return subprocess.run(["ip", "link", "show", name],
                           capture_output=True, text=True).returncode == 0
 
-def reconcile_interfaces(exits: list[dict], conf_dir: str) -> None:
+def reconcile_interfaces(exits: list[dict], conf_dir: str, grace_sec: int = 600) -> None:
     quick = _quick()
     if quick is None:
         log.error("awg-quick/wg-quick not found; cannot manage exit interfaces")
@@ -38,6 +38,10 @@ def reconcile_interfaces(exits: list[dict], conf_dir: str) -> None:
             if iface in want:
                 continue
             conf = os.path.join(conf_dir, fn)
+            # A conf newer than the grace window may belong to an import that landed
+            # after this cycle's exits snapshot; don't archive it yet.
+            if time.time() - os.path.getmtime(conf) < grace_sec:
+                continue
             subprocess.run([os.path.basename(quick), "down", conf], capture_output=True, text=True)
             ts = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
             os.replace(conf, f"{conf}.revoked-{ts}")   # archive -- never unlink

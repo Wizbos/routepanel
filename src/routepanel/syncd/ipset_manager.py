@@ -7,6 +7,11 @@ def _run(args: list[str]) -> str:
     r = subprocess.run(args, capture_output=True, text=True, check=True)
     return r.stdout
 
+def ipset_exists(name: str) -> bool:
+    """Check a kernel ipset exists by exact name (not the rule_<id> convention --
+    used for system sets like ru_ranges/ru_government/telegram_ranges)."""
+    return subprocess.run(["ipset", "list", name], capture_output=True).returncode == 0
+
 def ensure_ipset(rule_id, timeout: int = 0) -> None:
     name = f"{IPSET_PREFIX}{rule_id}"
     r = subprocess.run(["ipset", "list", name], capture_output=True)

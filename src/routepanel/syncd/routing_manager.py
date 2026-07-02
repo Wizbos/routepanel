@@ -2,6 +2,7 @@
 import subprocess
 import logging
 from routepanel.config import get_config
+from routepanel.syncd import ipset_manager
 
 log = logging.getLogger("routesyncd")
 
@@ -64,8 +65,14 @@ def rebuild_chain(rules: list[dict], effective_fwmark: dict, default_fwmark: int
     # 1b. private/corp destinations stay direct (never sent to the VPN)
     for cidr in LOCAL_DIRECT:
         app("-d", cidr, "-j", "MARK", "--and-mark", "0x0")
-    # 2. system overrides
+    # 2. system overrides -- gated on the ipset actually existing. These sets are
+    # normally created by routepanel-init.sh at boot, but routesyncd can race that
+    # script (or a set can be dropped later); `--match-set <missing>` makes
+    # iptables -A fail, which must not abort the rest of the chain rebuild.
     for name, action in SYSTEM_IPSETS:
+        if not ipset_manager.ipset_exists(name):
+            log.error("system ipset '%s' missing; skipping its chain rule this cycle", name)
+            continue
         if action == "clear":
             app("-m", "set", "--match-set", name, "dst", "-j", "MARK", "--and-mark", "0x0")
         else:
@@ -90,7 +97,14 @@ def apply_ip_rules(exits: list[dict]) -> None:
                   "lookup", e["routing_table"], "priority", str(100 + e["fwmark"])], check=True)
 
 def apply_routing_tables(exits: list[dict]) -> None:
-    """Ensure a default route in each VPN routing table."""
+    """Ensure a default route in each VPN routing table.
+
+    Not check=True: at boot an exit's rpx interface may not be up yet (awg-quick
+    hasn't run this cycle), and `ip route replace ... dev <iface>` fails when the
+    device doesn't exist. That must be logged and skipped, not raised -- an
+    exception here would abort the whole reconcile, including exits whose
+    interface IS present. exit_iface_manager brings the interface up; the next
+    sync cycle retries this route once it exists."""
     for e in exits:
         if e["fwmark"] == 0:
             continue
@@ -98,8 +112,11 @@ def apply_routing_tables(exits: list[dict]) -> None:
             log.error("exit %s: refusing default route into protected table '%s' "
                       "(would hijack host egress)", e["id"], e["routing_table"])
             continue
-        _run(["ip", "route", "replace", "default", "dev", e["interface"],
-              "table", e["routing_table"]], check=True)
+        r = _run(["ip", "route", "replace", "default", "dev", e["interface"],
+                  "table", e["routing_table"]])
+        if r.returncode != 0:
+            log.error("exit %s: failed to set default route via %s (device may not "
+                      "be up yet): %s", e["id"], e["interface"], r.stderr.strip())
 
 
 def _nat(args: list[str], check: bool = False) -> subprocess.CompletedProcess:

@@ -36,6 +36,11 @@ def parse_tunnel_conf(text: str) -> TunnelConf:
             continue
         if line.startswith("[") and line.endswith("]"):
             name = line[1:-1].strip().lower()
+            # A repeated section (any case: [Interface] then [interface]) must
+            # not silently merge -- setdefault would let a second [interface]
+            # block quietly overwrite keys from the first. Treat it as malformed.
+            if name in sections:
+                raise ConfError(f"duplicate [{name}] section")
             current = sections.setdefault(name, {})
             continue
         if "=" not in line or current is None:
@@ -45,14 +50,19 @@ def parse_tunnel_conf(text: str) -> TunnelConf:
     iface, peer = sections.get("interface"), sections.get("peer")
     if not iface or not peer:
         raise ConfError("config must contain [Interface] and [Peer] sections")
-    if missing := _REQUIRED_INTERFACE - iface.keys():
+    # Keys with an empty value (e.g. "PrivateKey =") are as useless as a missing
+    # key -- don't let them slip past the required-key check.
+    if missing := _REQUIRED_INTERFACE - {k for k, v in iface.items() if v}:
         raise ConfError(f"[Interface] missing: {', '.join(sorted(missing))}")
-    if missing := _REQUIRED_PEER - peer.keys():
+    if missing := _REQUIRED_PEER - {k for k, v in peer.items() if v}:
         raise ConfError(f"[Peer] missing: {', '.join(sorted(missing))}")
     return TunnelConf(interface=iface, peer=peer)
 
 def render_exit_conf(tc: TunnelConf) -> str:
-    iface = {k: v for k, v in tc.interface.items() if k not in ("DNS", "Table")}
+    # Strip case-insensitively -- a pasted conf with lowercase "dns"/"table" must
+    # be stripped just as reliably as canonical "DNS"/"Table", or the exit iface
+    # could rewrite the host resolver or fight routepanel's own routing tables.
+    iface = {k: v for k, v in tc.interface.items() if k.lower() not in ("dns", "table")}
     iface["Table"] = "off"
     peer = dict(tc.peer)
     peer.setdefault("AllowedIPs", "0.0.0.0/0")

@@ -10,6 +10,7 @@ from routepanel.config import get_config
 from routepanel.panel.deps import get_db, get_actor_ip, trigger_sync
 from routepanel.panel._templates import templates
 from routepanel.syncd.health import HealthStatus
+from routepanel.settings import get_setting
 
 router = APIRouter()
 
@@ -70,6 +71,9 @@ async def delete_exit(exit_id: str, db: aiosqlite.Connection = Depends(get_db),
         used_by += [f"exit:{r['id']}" for r in await cur.fetchall()]
     if used_by:
         raise HTTPException(409, f"Exit '{exit_id}' is still referenced by: {', '.join(used_by)}")
+    if (await get_setting(db, "default_exit_id")) == exit_id:
+        raise HTTPException(409, f"Exit '{exit_id}' is the default route for all client traffic; "
+                                 f"set another default before deleting it.")
     await db.execute("DELETE FROM exits WHERE id=?", (exit_id,))
     await db.execute("INSERT INTO history(action,exit_id,detail,actor_ip) VALUES(?,?,?,?)",
                      ("removed", exit_id, "exit deleted", actor))

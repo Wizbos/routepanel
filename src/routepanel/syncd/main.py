@@ -172,7 +172,7 @@ async def _run_sync_inner() -> None:
 
         from routepanel.syncd import exit_iface_manager
         try:
-            exit_iface_manager.reconcile_interfaces(exits, cfg.exit_conf_dir)
+            exit_iface_manager.reconcile_interfaces(exits, cfg.exit_conf_dir, grace_sec=2 * cfg.poll_interval)
         except Exception as e:
             log.error("exit interface reconcile failed: %s", e)
 

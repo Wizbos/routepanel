@@ -43,3 +43,17 @@ async def test_import_duplicate_id_422(import_env):
     await import_env.post("/exits/import", json={"id": "dup", "conf_text": CONF})
     r = await import_env.post("/exits/import", json={"id": "dup", "conf_text": CONF})
     assert r.status_code == 422
+
+async def test_delete_default_exit_409(import_env):
+    r = await import_env.post("/exits/import", json={"id": "myvpn", "conf_text": CONF})
+    assert r.json()["default"] is True
+    r2 = await import_env.delete("/exits/myvpn")
+    assert r2.status_code == 409
+    assert "default route" in r2.json()["detail"]
+
+async def test_delete_non_default_imported_exit_ok(import_env):
+    await import_env.post("/exits/import", json={"id": "first", "conf_text": CONF})   # becomes default
+    r = await import_env.post("/exits/import", json={"id": "second", "conf_text": CONF})
+    assert r.json()["default"] is False
+    r2 = await import_env.delete("/exits/second")
+    assert r2.status_code == 200
