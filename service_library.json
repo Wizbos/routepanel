@@ -9,7 +9,7 @@
       "yt3.ggpht.com",
       "youtu.be"
     ],
-    "comment": "cidrs = Google serving ranges (YouTube rides Google's network). Seed set; the weekly google-cidr-refresh job replaces it from goog.json.",
+    "comment": "cidrs = Google serving ranges (YouTube rides Google's network). Seed set; refresh job replaces it from goog.json.",
     "cidrs": [
       "142.250.0.0/15",
       "142.251.0.0/16",
@@ -22,7 +22,11 @@
       "74.125.0.0/16",
       "64.233.160.0/19",
       "66.102.0.0/20"
-    ]
+    ],
+    "refresh": {
+      "format": "goog-json",
+      "url": "https://www.gstatic.com/ipranges/goog.json"
+    }
   },
   {
     "id": "netflix",
@@ -33,7 +37,12 @@
       "nflxvideo.net",
       "nflxso.net",
       "fast.com"
-    ]
+    ],
+    "comment": "cidrs refreshed from RIPEstat announced-prefixes for Netflix AS2906.",
+    "refresh": {
+      "format": "ripestat-as",
+      "url": "https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS2906"
+    }
   },
   {
     "id": "spotify",
@@ -51,7 +60,30 @@
       "instagram.com",
       "cdninstagram.com",
       "fbcdn.net"
-    ]
+    ],
+    "comment": "cidrs = Meta AS32934 backbone (shared with facebook/whatsapp). Refreshed from RIPEstat.",
+    "cidrs": [
+      "31.13.24.0/21",
+      "31.13.64.0/18",
+      "45.64.40.0/22",
+      "66.220.144.0/20",
+      "69.63.176.0/20",
+      "69.171.224.0/19",
+      "74.119.76.0/22",
+      "102.132.96.0/20",
+      "103.4.96.0/22",
+      "129.134.0.0/16",
+      "157.240.0.0/16",
+      "173.252.64.0/18",
+      "179.60.192.0/22",
+      "185.60.216.0/22",
+      "185.89.216.0/22",
+      "204.15.20.0/22"
+    ],
+    "refresh": {
+      "format": "ripestat-as",
+      "url": "https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS32934"
+    }
   },
   {
     "id": "twitter",
@@ -61,7 +93,18 @@
       "x.com",
       "t.co",
       "twimg.com"
-    ]
+    ],
+    "comment": "cidrs = Twitter/X AS13414. Refreshed from RIPEstat.",
+    "cidrs": [
+      "104.244.40.0/21",
+      "192.133.76.0/22",
+      "199.16.156.0/22",
+      "199.59.148.0/22"
+    ],
+    "refresh": {
+      "format": "ripestat-as",
+      "url": "https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS13414"
+    }
   },
   {
     "id": "tiktok",
@@ -69,6 +112,11 @@
     "domains": [
       "tiktok.com",
       "tiktokcdn.com",
+      "tiktokv.com",
+      "ttwstatic.com",
+      "ibyteimg.com",
+      "ibytedtos.com",
+      "byteoversea.com",
       "musical.ly"
     ]
   },
@@ -93,7 +141,11 @@
       "74.125.0.0/16",
       "64.233.160.0/19",
       "66.102.0.0/20"
-    ]
+    ],
+    "refresh": {
+      "format": "goog-json",
+      "url": "https://www.gstatic.com/ipranges/goog.json"
+    }
   },
   {
     "id": "facebook",
@@ -103,7 +155,30 @@
       "fb.com",
       "fbcdn.net",
       "fbsbx.com"
-    ]
+    ],
+    "comment": "cidrs = Meta AS32934 backbone (shared with instagram/whatsapp). Refreshed from RIPEstat.",
+    "cidrs": [
+      "31.13.24.0/21",
+      "31.13.64.0/18",
+      "45.64.40.0/22",
+      "66.220.144.0/20",
+      "69.63.176.0/20",
+      "69.171.224.0/19",
+      "74.119.76.0/22",
+      "102.132.96.0/20",
+      "103.4.96.0/22",
+      "129.134.0.0/16",
+      "157.240.0.0/16",
+      "173.252.64.0/18",
+      "179.60.192.0/22",
+      "185.60.216.0/22",
+      "185.89.216.0/22",
+      "204.15.20.0/22"
+    ],
+    "refresh": {
+      "format": "ripestat-as",
+      "url": "https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS32934"
+    }
   },
   {
     "id": "telegram",
@@ -115,7 +190,7 @@
       "telesco.pe",
       "cdn-telegram.org"
     ],
-    "comment": "cidrs = official Telegram ASN ranges (core.telegram.org/resources/cidr.txt).",
+    "comment": "cidrs = official Telegram ASN ranges (core.telegram.org/resources/cidr.txt). Refreshed from that source.",
     "cidrs": [
       "149.154.160.0/20",
       "185.76.151.0/24",
@@ -126,6 +201,142 @@
       "91.108.16.0/22",
       "91.108.20.0/22",
       "91.108.56.0/22"
+    ],
+    "refresh": {
+      "format": "cidr-lines",
+      "url": "https://core.telegram.org/resources/cidr.txt"
+    }
+  },
+  {
+    "id": "whatsapp",
+    "name": "WhatsApp",
+    "domains": [
+      "whatsapp.com",
+      "whatsapp.net",
+      "wa.me"
+    ],
+    "comment": "cidrs = Meta AS32934 backbone (shared with facebook/instagram). Refreshed from RIPEstat.",
+    "cidrs": [
+      "31.13.24.0/21",
+      "31.13.64.0/18",
+      "45.64.40.0/22",
+      "66.220.144.0/20",
+      "69.63.176.0/20",
+      "69.171.224.0/19",
+      "74.119.76.0/22",
+      "102.132.96.0/20",
+      "103.4.96.0/22",
+      "129.134.0.0/16",
+      "157.240.0.0/16",
+      "173.252.64.0/18",
+      "179.60.192.0/22",
+      "185.60.216.0/22",
+      "185.89.216.0/22",
+      "204.15.20.0/22"
+    ],
+    "refresh": {
+      "format": "ripestat-as",
+      "url": "https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS32934"
+    }
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "domains": [
+      "discord.com",
+      "discord.gg",
+      "discordapp.com",
+      "discordapp.net",
+      "discord.media",
+      "discordcdn.com"
+    ]
+  },
+  {
+    "id": "twitch",
+    "name": "Twitch",
+    "domains": [
+      "twitch.tv",
+      "ttvnw.net",
+      "jtvnw.net",
+      "twitchcdn.net"
+    ]
+  },
+  {
+    "id": "signal",
+    "name": "Signal",
+    "domains": [
+      "signal.org",
+      "whispersystems.org",
+      "signal.art"
+    ]
+  },
+  {
+    "id": "viber",
+    "name": "Viber",
+    "domains": [
+      "viber.com",
+      "cdn.viber.com"
+    ]
+  },
+  {
+    "id": "linkedin",
+    "name": "LinkedIn",
+    "domains": [
+      "linkedin.com",
+      "licdn.com"
+    ]
+  },
+  {
+    "id": "patreon",
+    "name": "Patreon",
+    "domains": [
+      "patreon.com",
+      "patreonusercontent.com"
+    ]
+  },
+  {
+    "id": "medium",
+    "name": "Medium",
+    "domains": [
+      "medium.com"
+    ]
+  },
+  {
+    "id": "proton",
+    "name": "Proton",
+    "domains": [
+      "proton.me",
+      "protonmail.com",
+      "protonmail.ch",
+      "protonvpn.com"
+    ]
+  },
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "domains": [
+      "openai.com",
+      "chatgpt.com",
+      "oaistatic.com",
+      "oaiusercontent.com"
+    ]
+  },
+  {
+    "id": "anthropic",
+    "name": "Anthropic",
+    "domains": [
+      "anthropic.com",
+      "claude.ai",
+      "claudeusercontent.com"
+    ]
+  },
+  {
+    "id": "gemini",
+    "name": "Gemini",
+    "domains": [
+      "gemini.google.com",
+      "aistudio.google.com",
+      "generativelanguage.googleapis.com"
     ]
   }
 ]
