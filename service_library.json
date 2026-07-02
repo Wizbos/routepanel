@@ -115,7 +115,7 @@
       "telesco.pe",
       "cdn-telegram.org"
     ],
-    "comment": "cidrs = official Telegram ASN ranges (core.telegram.org/resources/cidr.txt). Advertised to corp via scripts/frr-telegram-redistribute.sh (redistribute kernel, since legacy antifilter routes shadow FRR static).",
+    "comment": "cidrs = official Telegram ASN ranges (core.telegram.org/resources/cidr.txt).",
     "cidrs": [
       "149.154.160.0/20",
       "185.76.151.0/24",
