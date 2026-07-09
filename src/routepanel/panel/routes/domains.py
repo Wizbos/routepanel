@@ -7,6 +7,7 @@ import aiosqlite
 from routepanel.panel.deps import get_db, get_actor_ip, trigger_sync
 from routepanel.panel._templates import templates
 from routepanel.cidr import normalize_cidrs
+from routepanel.domainval import validate_domains
 
 router = APIRouter()
 
@@ -62,6 +63,10 @@ async def add_domain_rule(data: DomainRuleIn, db: aiosqlite.Connection = Depends
         if not await cur.fetchone():
             raise HTTPException(400, f"Exit '{data.exit_id}' not found")
     try:
+        validate_domains(data.domains)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    try:
         static_cidrs = normalize_cidrs(data.static_cidrs)
     except ValueError as e:
         raise HTTPException(422, str(e))
@@ -89,6 +94,10 @@ async def update_domain_rule(rule_id: int, data: DomainRuleUpdate,
     async with db.execute("SELECT id FROM exits WHERE id=?", (data.exit_id,)) as cur:
         if not await cur.fetchone():
             raise HTTPException(400, f"Exit '{data.exit_id}' not found")
+    try:
+        validate_domains(data.domains)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
     try:
         static_cidrs = normalize_cidrs(data.static_cidrs)
     except ValueError as e:
