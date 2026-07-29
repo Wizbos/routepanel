@@ -57,6 +57,30 @@ def test_render_fragment_output_lines_always_parse_as_ipset_directive():
             assert " " not in d and "#" not in d and d != ""
 
 
+def test_long_domain_list_splits_into_lines_under_dnsmasq_limit():
+    # dnsmasq reads config lines with a 1024-char fgets buffer: anything longer
+    # is silently parsed as TWO lines and the tail dies with "bad option"
+    # (2026-07-29 corp incident: the line hit 1036 chars and dnsmasq rejected
+    # the fragment). A rule with ~35+ domains must be packed into several
+    # ipset= lines, each within the limit -- dnsmasq allows repeating the set.
+    domains = [f"svc-{i:03d}.some-routed-service-example.com" for i in range(60)]
+    rules = [{"id": 5, "domains": json.dumps(domains)}]
+    frag = dm.render_fragment(rules)
+
+    ipset_lines = [ln for ln in frag.splitlines() if ln.startswith("ipset=")]
+    assert len(ipset_lines) > 1, "must split, one line would exceed 1024 chars"
+    for ln in frag.splitlines():
+        assert len(ln) <= 1023, f"line exceeds dnsmasq buffer: {len(ln)} chars"
+    for ln in ipset_lines:
+        assert ln.startswith("ipset=/")
+        assert ln.endswith("/rule_5")
+    # no domain lost or duplicated by the split
+    seen: list[str] = []
+    for ln in ipset_lines:
+        seen.extend(ln[len("ipset=/"):-len("/rule_5")].split("/"))
+    assert sorted(seen) == sorted(domains)
+
+
 # --- sync_fragment: validate-before-apply + last-known-good rollback ---
 
 def test_sync_fragment_unchanged_skips_validate_and_reload(tmp_path):

@@ -4,6 +4,31 @@ from routepanel.domainval import filter_valid_domains
 
 log = logging.getLogger("routesyncd")
 
+# dnsmasq parses config files with a 1024-char line buffer (fgets/MAXDNAME):
+# a longer line is silently split and the tail dies as "bad option at line N".
+# 1023 chars is the hard bound; pack with a margin so a handful of extra
+# domains can't tip a line over.
+MAX_LINE = 1000
+
+
+def _ipset_lines(domains: list[str], set_name: str) -> list[str]:
+    """Greedily pack `domains` into as few `ipset=/dom/.../set_name` lines as
+    fit within MAX_LINE each. dnsmasq merges repeated ipset= directives for
+    the same set, so splitting one rule across lines is safe."""
+    lines: list[str] = []
+    chunk: list[str] = []
+    suffix = "/" + set_name
+    length = len("ipset=")
+    for d in domains:
+        if chunk and length + 1 + len(d) + len(suffix) > MAX_LINE:
+            lines.append("ipset=/" + "/".join(chunk) + suffix)
+            chunk, length = [], len("ipset=")
+        chunk.append(d)
+        length += 1 + len(d)
+    lines.append("ipset=/" + "/".join(chunk) + suffix)
+    return lines
+
+
 def render_fragment(rules: list[dict]) -> str:
     """Build dnsmasq `ipset=` lines mapping each rule's domains -> its rule_<id>
     set:
@@ -12,6 +37,9 @@ def render_fragment(rules: list[dict]) -> str:
     currently uses, so this fragment changes only when a rule's domains change,
     never on failover. dnsmasq matches a domain and all its subdomains, capturing
     the real per-session CDN hostnames that apex resolution would miss.
+
+    A rule with many domains is packed into several ipset= lines (see
+    _ipset_lines) so no line exceeds dnsmasq's 1024-char config-line buffer.
 
     Domains are re-validated here (not just at rule-creation time in the panel
     API) and anything that wouldn't parse as a plain hostname is dropped and
@@ -29,8 +57,7 @@ def render_fragment(rules: list[dict]) -> str:
         )
         if not domains:
             continue
-        joined = "/".join(domains)
-        lines.append(f"ipset=/{joined}/rule_{r['id']}")
+        lines.extend(_ipset_lines(domains, f"rule_{r['id']}"))
     return "\n".join(lines) + "\n"
 
 def write_fragment(path: str, content: str) -> bool:
