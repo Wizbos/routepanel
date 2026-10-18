@@ -158,3 +158,10 @@ async def test_put_domain_with_slash_rejected_422(test_client):
     assert r.status_code == 422
     page = await test_client.get("/")
     assert "edit3.com" in page.text   # original rule left untouched by the rejected edit
+
+
+@pytest.mark.asyncio
+async def test_rule_edit_requests_sync_without_signalling_live_daemon(test_client, no_live_sync_signal):
+    r = await test_client.post("/domains", json={"name": "T", "domains": ["example.com"], "exit_id": "doprax"})
+    assert r.status_code in (200, 201)
+    assert no_live_sync_signal == [1]
