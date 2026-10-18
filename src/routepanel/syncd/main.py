@@ -7,7 +7,7 @@ from routepanel.settings import get_default_exit_id
 from routepanel.syncd.resolver import resolve_domains
 from routepanel.syncd.health import check_exit, ExitHealth, HealthStatus
 from routepanel.syncd import ipset_manager, frr_manager, routing_manager, dnsmasq_manager
-from routepanel.syncd.ospf import build_ospf_desired
+from routepanel.syncd.ospf import build_ospf_desired, uncovered_hosts
 
 log = logging.getLogger("routesyncd")
 _health: dict[str, ExitHealth] = {}
@@ -145,10 +145,10 @@ async def _run_sync_inner() -> None:
             #       use (kills anycast drift). /32s capped (LSA-storm guard).
             if rule["ospf_distribute"]:
                 members = ipset_manager.get_members(rule["id"])
-                rule_prefixes = build_ospf_desired(
-                    members, json.loads(rule.get("static_cidrs") or "[]"), cfg.max_ospf_ips_per_rule
-                )
-                host_count = sum(1 for m in members if "/" not in m)
+                rule_static = json.loads(rule.get("static_cidrs") or "[]")
+                rule_prefixes = build_ospf_desired(members, rule_static, cfg.max_ospf_ips_per_rule)
+                # only hosts outside the static CIDRs compete for the /32 cap
+                host_count = len(uncovered_hosts(members, rule_static))
                 if host_count > cfg.max_ospf_ips_per_rule:
                     await db.execute(
                         "INSERT INTO history(action,domain_rule_id,exit_id,detail) VALUES(?,?,?,?)",
