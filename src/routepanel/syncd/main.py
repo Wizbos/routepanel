@@ -20,6 +20,34 @@ _last_frr_sync: float = 0.0           # monotonic ts of last FRR push (debounce)
 def _usable(h: ExitHealth | None) -> bool:
     return h is None or h.status != HealthStatus.DOWN
 
+async def load_seed_health(db: aiosqlite.Connection, max_age_sec: int) -> dict[str, ExitHealth]:
+    """Warm start: exit health the previous daemon persisted at most `max_age_sec`
+    ago. Without it a restart begins every exit DOWN, so the first sync fails all
+    rules over and the failback dwell then holds them there for minutes.
+    up_since stays None -- a seeded exit never starts the dwell clock."""
+    seed: dict[str, ExitHealth] = {}
+    async with db.execute(
+        "SELECT exit_id, status, latency_ms FROM exit_health WHERE checked_at >= datetime('now', ?)",
+        (f"-{max_age_sec} seconds",),
+    ) as cur:
+        for row in await cur.fetchall():
+            try:
+                status = HealthStatus(row["status"])
+            except ValueError:      # 'unknown' (never checked)
+                continue
+            seed[row["exit_id"]] = ExitHealth(exit_id=row["exit_id"], status=status,
+                                              latency_ms=row["latency_ms"])
+    return seed
+
+async def _warm_start_health(cfg) -> None:
+    db = await open_db()
+    try:
+        _health.update(await load_seed_health(db, 3 * cfg.health_interval))
+    finally:
+        await db.close()
+    log.info("warm start health: %s",
+             ", ".join(f"{k}={v.status.value}" for k, v in _health.items()) or "none (cold start)")
+
 async def get_effective_exit(db: aiosqlite.Connection, primary_exit_id: str,
                              fallback_override_id: str | None,
                              health: dict[str, ExitHealth],
@@ -267,6 +295,8 @@ def main() -> None:
     # the triggered run safe even if a periodic sync is in flight.
     loop.add_signal_handler(signal.SIGUSR1, lambda: loop.create_task(run_sync()))
     try:
+        # Seed health BEFORE the loops start: the first sync must not see every exit DOWN.
+        loop.run_until_complete(_warm_start_health(cfg))
         loop.run_until_complete(asyncio.gather(_health_loop(cfg), _sync_loop(cfg)))
     finally:
         loop.close()
