@@ -35,3 +35,16 @@ async def test_unique_fwmark_index(tmp_db):
 async def test_fwmark_zero_not_constrained(tmp_db):
     await tmp_db.execute("INSERT INTO exits(id,interface,fwmark,routing_table) VALUES('d1','eth0',0,'main')")
     await tmp_db.execute("INSERT INTO exits(id,interface,fwmark,routing_table) VALUES('d2','eth1',0,'main')")
+
+async def test_domain_rules_enabled_added_to_legacy_db(tmp_path):
+    legacy = str(tmp_path / "legacy2.db")
+    db = await aiosqlite.connect(legacy)
+    await db.execute("CREATE TABLE domain_rules (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, "
+                     "domains TEXT NOT NULL, exit_id TEXT NOT NULL)")
+    await db.execute("INSERT INTO domain_rules(name,domains,exit_id) VALUES('TV','[]','direct')")
+    await db.commit(); await db.close()
+
+    db = await open_db(legacy)
+    async with db.execute("SELECT enabled FROM domain_rules WHERE name='TV'") as cur:
+        assert (await cur.fetchone())["enabled"] == 1   # existing rules stay active
+    await db.close()

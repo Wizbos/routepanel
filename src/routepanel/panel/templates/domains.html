@@ -38,7 +38,7 @@
   </tr></thead>
   <tbody id="rows">
   {% for r in rules %}
-    <tr
+    <tr{% if not r.enabled %} class="rule-off"{% endif %}
       data-name="{{ r.name|lower }}"
       data-search="{{ (r.name ~ ' ' ~ r.domains_list|join(' '))|lower }}"
       data-exit="{{ r.exit_id }}"
@@ -47,7 +47,7 @@
       data-sync="{{ r.last_sync or '' }}"
       data-rule='{{ {"id": r.id, "name": r.name, "domains": r.domains_list, "exit_id": r.exit_id, "ospf_distribute": (r.ospf_distribute and true or false), "static_cidrs": r.cidrs_list, "notes": r.notes or ""} | tojson }}'>
       <td>
-        <div class="svc-name">{{ r.name }}</div>
+        <div class="svc-name">{{ r.name }}{% if not r.enabled %} <span class="badge">disabled</span>{% endif %}</div>
         <div class="svc-domains">{{ r.domains_list[0] }}{% if r.domains_list|length > 1 %} +{{ r.domains_list|length - 1 }}{% endif %}</div>
       </td>
       <td><span class="badge {% if r.exit_id=='direct' %}badge-direct{% else %}badge-vpn{% endif %}"><span class="dot dot-{{ r.exit_health }}"></span>{{ r.exit_id }}</span></td>
@@ -55,6 +55,7 @@
       <td class="num">{{ r.ip_count }}</td>
       <td><span class="sync">{{ r.last_sync or 'pending' }}</span></td>
       <td class="row-actions">
+        <button class="icon-btn" title="{{ 'Enable' if not r.enabled else 'Disable' }}" onclick="toggleRule({{ r.id }}, {{ 'true' if not r.enabled else 'false' }})">{{ '&#9654;'|safe if not r.enabled else '&#10074;&#10074;'|safe }}</button>
         <button class="icon-btn" title="Edit" onclick="editRule(this)">&#9998;</button>
         <button class="icon-btn danger" title="Delete" onclick="delRule({{ r.id }})">&#10005;</button>
       </td>
@@ -140,6 +141,11 @@ async function submitRule() {
     btn.disabled = false;
     alert("Save failed: " + (e && e.message ? e.message : e));
   }
+}
+
+async function toggleRule(id, enable) {
+  try { await apiPost("/domains/" + id + "/toggle", {enabled: enable}); location.reload(); }
+  catch (e) { alert("Toggle failed: " + (e && e.message ? e.message : e)); }
 }
 
 async function delRule(id) {

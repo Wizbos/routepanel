@@ -116,6 +116,28 @@ async def update_domain_rule(rule_id: int, data: DomainRuleUpdate,
     trigger_sync()
     return {"ok": True}
 
+class RuleToggle(BaseModel):
+    enabled: bool
+
+@router.post("/domains/{rule_id}/toggle")
+async def toggle_domain_rule(rule_id: int, data: RuleToggle,
+                             db: aiosqlite.Connection = Depends(get_db),
+                             actor: str = Depends(get_actor_ip)):
+    async with db.execute("SELECT name, exit_id FROM domain_rules WHERE id=?", (rule_id,)) as cur:
+        row = await cur.fetchone()
+    if not row:
+        raise HTTPException(404, "Rule not found")
+    await db.execute("UPDATE domain_rules SET enabled=?, updated_at=datetime('now') WHERE id=?",
+                     (int(data.enabled), rule_id))
+    await db.execute(
+        "INSERT INTO history(action,domain_rule_id,exit_id,detail,actor_ip) VALUES(?,?,?,?,?)",
+        ("enabled" if data.enabled else "disabled", rule_id, row["exit_id"],
+         f"{'enabled' if data.enabled else 'disabled'} rule: {row['name']}", actor)
+    )
+    await db.commit()
+    trigger_sync()
+    return {"ok": True, "enabled": data.enabled}
+
 @router.delete("/domains/{rule_id}")
 async def delete_domain_rule(rule_id: int, db: aiosqlite.Connection = Depends(get_db),
                               actor: str = Depends(get_actor_ip)):

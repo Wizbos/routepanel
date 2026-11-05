@@ -96,3 +96,6 @@ code{font-family:ui-monospace,monospace;font-size:12.5px;color:#bbb}
 .check-row{display:flex;align-items:center;gap:8px}
 .check-row input{width:auto;height:auto}
 .check-row label{margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
+
+tr.rule-off td{opacity:.45}
+tr.rule-off td.row-actions{opacity:1}
