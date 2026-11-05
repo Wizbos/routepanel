@@ -119,7 +119,7 @@ async def _run_sync_inner() -> None:
     db = await open_db(autocommit=True)
     try:
         async with db.execute(
-            "SELECT id, name, domains, exit_id, fallback_override_id, ospf_distribute, static_cidrs FROM domain_rules"
+            "SELECT id, name, domains, exit_id, fallback_override_id, ospf_distribute, static_cidrs FROM domain_rules WHERE enabled=1"
         ) as cur:
             rules = [dict(r) for r in await cur.fetchall()]
         async with db.execute("SELECT * FROM exits") as cur:
@@ -191,7 +191,7 @@ async def _run_sync_inner() -> None:
                     ON CONFLICT(domain_rule_id, ip) DO UPDATE SET last_seen=datetime('now')
                 """, (rule["id"], ip))
 
-        # Reap ipsets for deleted rules (the chain already stopped matching them).
+        # Reap ipsets for deleted OR disabled rules (the chain already stopped matching them).
         live_ids = {r["id"] for r in rules}
         for gone in [rid for rid in list(_last_effective) if rid not in live_ids]:
             routing_manager.remove_wan_nat(gone, cfg.wan_interface)

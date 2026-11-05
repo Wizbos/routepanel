@@ -94,3 +94,11 @@ async def test_seeded_primary_keeps_rule_on_primary_after_restart(tmp_db):
     seed = await load_seed_health(tmp_db, max_age_sec=90)
     # fresh daemon: prev defaults to the rule's own exit, dwell configured
     assert await get_effective_exit(tmp_db, "doprax", None, seed, "doprax", 300) == "doprax"
+
+
+def test_syncd_only_loads_enabled_rules():
+    # Disabled rules must vanish from the sync cycle (and so be reaped like deleted ones).
+    import inspect
+    from routepanel.syncd import main
+    src = inspect.getsource(main._run_sync_inner)
+    assert "FROM domain_rules WHERE enabled=1" in src

@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS domain_rules (
     ospf_distribute INTEGER NOT NULL DEFAULT 0,
     static_cidrs TEXT NOT NULL DEFAULT '[]',   -- JSON array of stable prefixes, advertised via OSPF when a rule enables it, and seeded into the rule's ipset
     notes TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,        -- 0 = rule kept but ignored by routesyncd
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -108,6 +109,10 @@ async def open_db(path: str | None = None, autocommit: bool = False) -> aiosqlit
         cols = {r["name"] for r in await cur.fetchall()}
     if "type" not in cols:
         await db.execute("ALTER TABLE exits ADD COLUMN type TEXT NOT NULL DEFAULT 'manual'")
+    async with db.execute("PRAGMA table_info(domain_rules)") as cur:
+        rule_cols = {r["name"] for r in await cur.fetchall()}
+    if "enabled" not in rule_cols:
+        await db.execute("ALTER TABLE domain_rules ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
     # A concurrent import must not allocate the same fwmark twice (SELECT MAX+1
     # races across connections). Partial index: direct exits legitimately share 0.
     await db.execute(

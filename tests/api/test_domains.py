@@ -165,3 +165,32 @@ async def test_rule_edit_requests_sync_without_signalling_live_daemon(test_clien
     r = await test_client.post("/domains", json={"name": "T", "domains": ["example.com"], "exit_id": "doprax"})
     assert r.status_code in (200, 201)
     assert no_live_sync_signal == [1]
+
+@pytest.mark.asyncio
+async def test_toggle_rule_disables_and_enables(test_client, no_live_sync_signal):
+    await test_client.post("/domains", json={
+        "name": "TradingView", "domains": ["tradingview.com"], "exit_id": "direct"})
+    n = len(no_live_sync_signal)
+    r = await test_client.post("/domains/1/toggle", json={"enabled": False})
+    assert r.status_code == 200 and r.json()["enabled"] is False
+    assert len(no_live_sync_signal) == n + 1          # syncd is woken
+    page = await test_client.get("/")
+    assert "TradingView" in page.text and "rule-off" in page.text   # kept, shown disabled
+    hist = await test_client.get("/history")
+    assert "disabled rule: TradingView" in hist.text
+    await test_client.post("/domains/1/toggle", json={"enabled": True})
+    assert "rule-off" not in (await test_client.get("/")).text
+
+@pytest.mark.asyncio
+async def test_edit_does_not_reenable_disabled_rule(test_client):
+    await test_client.post("/domains", json={
+        "name": "TV", "domains": ["tv.com"], "exit_id": "direct"})
+    await test_client.post("/domains/1/toggle", json={"enabled": False})
+    await test_client.put("/domains/1", json={
+        "name": "TV2", "domains": ["tv.com"], "exit_id": "direct"})
+    assert "rule-off" in (await test_client.get("/")).text
+
+@pytest.mark.asyncio
+async def test_toggle_unknown_rule_404(test_client):
+    r = await test_client.post("/domains/999/toggle", json={"enabled": False})
+    assert r.status_code == 404
